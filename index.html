@@ -175,6 +175,10 @@
     border-left-color:var(--shadow);
     transform:translateY(1px);
   }
+  button:disabled{
+    opacity:.55;
+    cursor:not-allowed;
+  }
 
   .bigbtn{
     width:100%;
@@ -340,6 +344,31 @@
     flex:0 0 auto;
   }
 
+  /* ✅ INVENTORY BOX */
+  .invBox{
+    background:var(--panel2);
+    border:2px solid var(--shadow);
+    border-top-color:var(--hi);
+    border-left-color:var(--hi);
+    padding:8px;
+    font-size:12px;
+    margin-top:10px;
+    flex:1 1 auto;
+    min-height:0;
+    overflow:auto;
+  }
+  .invBox h4{
+    margin:0 0 6px 0;
+    font-size:12px;
+    letter-spacing:.4px;
+    text-transform:uppercase;
+  }
+  .invMeta{
+    font-size:11px;
+    opacity:.8;
+    margin:0 0 6px 0;
+  }
+
   .genderRow{
     display:flex;
     gap:10px;
@@ -463,7 +492,7 @@
         <div class="panel">
           <div class="panelHeader">
             <h3>PREVIEW</h3>
-            <label class="idleToggleWrap" title="Breathing/scrunch preview">
+            <label class="idleToggleWrap" title="Breathing + blink">
               <input type="checkbox" id="idleToggle">
               IDLE
             </label>
@@ -504,7 +533,7 @@
         <div class="panel">
           <div class="rpgTopRow">
             <h3>RPG STATS</h3>
-            <div class="rpgHint" id="rpgLine">martial / scholar / social / grit</div>
+            <div class="rpgHint" id="rpgLine">martial / physique / grit / craft / scholar / arcana / social / luck</div>
           </div>
 
           <div class="rpgChartBox">
@@ -526,6 +555,12 @@
             <div class="label" style="margin-bottom:6px;">ROLE</div>
             <div id="roleOut">…</div>
           </div>
+
+          <div class="invBox">
+            <h4>INVENTORY</h4>
+            <div class="invMeta" id="invMeta">generated from role + traits</div>
+            <ul class="clean" id="invList"></ul>
+          </div>
         </div>
       </div>
 
@@ -533,9 +568,7 @@
       <div class="familyWrap">
         <div class="panel">
           <div class="familyTopRow">
-            <div>
-              <h3>FAMILY TREE</h3>
-            </div>
+            <div><h3>FAMILY TREE</h3></div>
             <div style="display:flex; gap:8px; flex-wrap:wrap;">
               <button id="btnFamilyRefresh" class="miniBtn">REFRESH</button>
               <button id="btnFamilyRedraw" class="miniBtn">REDRAW</button>
@@ -549,7 +582,7 @@
             </div>
 
             <div class="crestCanvasBox">
-              <div class="label" style="margin:0 0 6px 0;">CREST</div>
+              <div class="label" style="margin:0 0 6px 0;">FAMILY CREST</div>
               <canvas id="crest" width="340" height="220"></canvas>
             </div>
           </div>
@@ -569,60 +602,146 @@ const FEMALE_ROOT = "femaledwarf";
 const CREST_ROOT = "crests";
 
 /* =========================
+   UNIVERSAL MISC SYSTEM
+========================= */
+/*
+  ✅ Your setup (from your screenshots):
+
+  - Universal "unlock body" lives here:
+      body/misc/01.png ...
+
+  - Matching misc item lives here:
+      body/misc-items/01.png ...
+
+  So the misc item folder is INSIDE body/.
+*/
+const UNIVERSAL_BODY_SUBFOLDER = "misc";
+
+/* MISC item key is stable; folder is resolved via candidates below */
+const MISC_ITEM_KEY = "misc_item";
+
+/* ✅ MISC item folder candidates (tries in order until it finds files)
+   NOTE: folder strings can include slashes. */
+const MISC_ITEM_FOLDER_CANDIDATES = [
+  "body/misc-items",  // ✅ your actual folder
+  "body/misc_item",
+  "body/misc-item",
+  "misc-items",
+  "misc_item",
+  "misc-item"
+];
+
+/* =========================
+   COLOR SUBFOLDER CONFIG
+========================= */
+const HAIR_COLORS = ["black","blonde","brown","red","white"];
+const SKIN_COLORS = ["black","blue","brown","grey","misc","purple","white"];
+
+/* Which parts are hair-color locked together */
+const HAIR_COLOR_KEYS_MALE   = ["hair","hair_back","beards","stache","brows"];
+const HAIR_COLOR_KEYS_FEMALE = ["hair","backhair"];
+
+/* Which parts are skin-tone locked together */
+const SKIN_COLOR_KEYS = ["body","head"];
+
+/* =========================
+   BLINK CONFIG
+========================= */
+const BLINK_EYES_FILENAME = "05.png";
+const BLINK_MIN_MS = 1800;
+const BLINK_MAX_MS = 4600;
+const BLINK_DURATION_MS = 110;
+
+/* =========================
    MALE CONFIG
 ========================= */
 const MALE_CATEGORIES = [
   { key: "background", label: "BG", folder: "background" },
+
+  { key: "accessories3", label: "ACC3", folder: "accessories3" }, // behind everything (but above background)
+
   { key: "hair_back",  label: "HAIR #2", folder: "hair_back" },
   { key: "body",   label: "BODY",   folder: "body"   },
   { key: "head",   label: "HEAD",   folder: "head"   },
+
+  { key: "accessories2", label: "ACC2", folder: "accessories2" },
+
   { key: "beards", label: "BEARD",  folder: "beards" },
   { key: "mouth",  label: "MOUTH",  folder: "mouth"  },
   { key: "stache", label: "STACHE", folder: "stache" },
   { key: "nose",   label: "NOSE",   folder: "nose"   },
   { key: "eyes",   label: "EYES",   folder: "eyes"   },
+
   { key: "accessories", label: "ACC", folder: "accessories" },
+
+  /* ✅ misc item uses dynamic folder resolution */
+  { key: MISC_ITEM_KEY, label: "MISC", folder: MISC_ITEM_FOLDER_CANDIDATES[0] },
+
   { key: "brows",  label: "BROWS",  folder: "brows"  },
   { key: "hair",   label: "HAIR",   folder: "hair"   },
   { key: "hat",    label: "HAT",    folder: "hat"    },
 ];
+
 const MALE_LAYER_ORDER = [
   "background",
+  "accessories3",
+
   "hair_back","body","head",
+
+  "accessories2",
+
   "beards","mouth","stache","nose","eyes",
-  "accessories","brows","hair",
+  "accessories",
+  MISC_ITEM_KEY,   // under brows/hair/hat
+  "brows","hair",
   "hat"
 ];
 
 /* =========================
-   FEMALE CONFIG (simple set) + NOSE
+   FEMALE CONFIG
 ========================= */
 const FEMALE_CATEGORIES = [
   { key: "background", label: "BG", folder: "background" },
+
+  { key: "accessories3", label: "ACC3", folder: "accessories3" },
+
   { key: "backhair",   label: "B-HAIR", folder: "backhair" },
   { key: "body",       label: "BODY", folder: "body" },
   { key: "head",       label: "HEAD", folder: "head" },
+
+  { key: "accessories2", label: "ACC2", folder: "accessories2" },
+
   { key: "mouth",      label: "MOUTH", folder: "mouth" },
   { key: "nose",       label: "NOSE", folder: "nose" },
   { key: "eyes",       label: "EYES", folder: "eyes" },
   { key: "hair",       label: "HAIR", folder: "hair" },
+
+  { key: MISC_ITEM_KEY, label: "MISC", folder: MISC_ITEM_FOLDER_CANDIDATES[0] },
 ];
+
 const FEMALE_LAYER_ORDER = [
   "background",
-  "backhair","body","head","mouth","nose","eyes","hair"
+  "accessories3",
+
+  "backhair","body","head",
+
+  "accessories2",
+
+  "mouth","nose","eyes","hair",
+  MISC_ITEM_KEY
 ];
 
 /* =========================
-   CREST CONFIG (✅ added pattern3 at the very front)
+   CREST CONFIG
 ========================= */
 const CREST_PARTS = [
   { key:"back",     folder:"back" },
   { key:"color",    folder:"color" },
   { key:"pattern1", folder:"pattern1" },
   { key:"pattern2", folder:"pattern2" },
-  { key:"pattern3", folder:"pattern3" }, // ✅ NEW
+  { key:"pattern3", folder:"pattern3" }, // ✅ new layer
 ];
-const CREST_LAYER_ORDER = ["back","color","pattern1","pattern2","pattern3"]; // ✅ pattern3 on top
+const CREST_LAYER_ORDER = ["back","color","pattern1","pattern2","pattern3"]; // ✅ pattern3 sits at very front
 
 /* =========================
    GLOBAL CONFIG
@@ -631,8 +750,16 @@ const MAX_SCAN = 120;
 const STOP_AFTER_CONSECUTIVE_MISSES = 10;
 
 const NONE_FILENAME = "04.png";
-const MALE_NONE_KEYS = new Set(["stache","beards","brows","hair","hair_back","accessories","mouth","hat","background"]);
-const FEMALE_NONE_KEYS = new Set(["background","backhair","mouth","hair","nose"]);
+const MALE_NONE_KEYS = new Set([
+  "stache","beards","brows","hair","hair_back","accessories","mouth","hat","background",
+  "accessories2","accessories3",
+  MISC_ITEM_KEY
+]);
+const FEMALE_NONE_KEYS = new Set([
+  "background","backhair","mouth","hair","nose",
+  "accessories2","accessories3",
+  MISC_ITEM_KEY
+]);
 
 const BODY_STRETCH_Y = 1.25;
 const FIT_SCALE = 0.82;
@@ -641,52 +768,133 @@ const PREVIEW_DROP_PX = 18;
 /* ====== IDLE ANIMATION ====== */
 let idleTime = 0;
 const IDLE_SPEED = 0.0028;
-const IDLE_AMOUNT = 0.035;
-const IDLE_BOUNCE = 6;
 
 const IDLE_TOGGLE_KEY = "dwarf_idle_enabled_v1";
 let idleEnabled = true;
 
-const STORAGE_KEY = "dwarf_state_with_bio_v10_family_clean";
+/* ====== ADVANCED IDLE / PARALLAX ====== */
+const BODY_BREATHE_SCALE = 0.030;
+const BODY_BOB_Y         = 2.5;
+
+const HEAD_BOB_Y         = 4.5;
+const HEAD_SWAY_X        = 2.0;
+
+const FACE_MICRO_X       = 1.2;
+const FACE_MICRO_Y       = 0.9;
+
+const DRAG_STRENGTH      = 0.18;
+let drag = { x:0, y:0 };
+
+const STORAGE_KEY = "dwarf_state_with_bio_v13_rpg8_miscUniversal_v2_acc23";
 const HAT_SHOW_CHANCE_ON_ROLL = 0.25;
 
-/* ====== BLONDE SETS (facial hair only) ====== */
-const BLONDE_STACHE_FILES = new Set(["07.png","08.png","09.png"]);
-const BLONDE_BEARD_FILES  = new Set(["12.png","13.png","14.png"]);
+/* =========================
+   BLINK STATE
+========================= */
+const blinkByGender = {
+  male:   { t:0, next:0, activeUntil:0, closedIdx:-1 },
+  female: { t:0, next:0, activeUntil:0, closedIdx:-1 },
+};
+function randMs(min,max){ return min + Math.random()*(max-min); }
+function scheduleNextBlink(g){ blinkByGender[g].next = blinkByGender[g].t + randMs(BLINK_MIN_MS, BLINK_MAX_MS); }
+function updateBlink(dtMs){
+  if (!idleEnabled) return;
+  const b = blinkByGender[activeGender];
+  b.t += dtMs;
+  if (b.closedIdx < 0) return;
+  if (b.activeUntil > 0){
+    if (b.t >= b.activeUntil){
+      b.activeUntil = 0;
+      scheduleNextBlink(activeGender);
+    }
+    return;
+  }
+  if (b.next === 0) scheduleNextBlink(activeGender);
+  if (b.t >= b.next){
+    b.activeUntil = b.t + BLINK_DURATION_MS;
+  }
+}
+function isBlinking(g){
+  const b = blinkByGender[g];
+  return idleEnabled && b.closedIdx >= 0 && b.activeUntil > 0 && b.t < b.activeUntil;
+}
 
 /* =========================
-   RPG / PERSONALITY RULES
+   RPG STATS (8-axis)
 ========================= */
+const STATS_KEYS = ["martial","physique","grit","craft","scholar","arcana","social","luck"];
+const STAT_LABELS = {
+  martial:"MARTIAL",
+  physique:"PHYSIQUE",
+  grit:"GRIT",
+  craft:"CRAFT",
+  scholar:"SCHOLAR",
+  arcana:"ARCANA",
+  social:"SOCIAL",
+  luck:"LUCK",
+};
+const STAT_MIN = 0;
+const STAT_MAX = 12;
+
+/* (rules unchanged...) */
+const BODY_RULES = {
+  "01.png": { stats:{ physique:4, martial:3, grit:2 }, traits:["disciplined","armored","tactical"], likes:["battle banners","weapon racks"], dislikes:["flimsy ropes","rust"] },
+  "02.png": { stats:{ social:2, luck:2, physique:1, grit:-1 }, traits:["lazy","hedonistic","easygoing"], likes:["warm pints","songs by the fire","cider"], dislikes:["exercise","long marches"] },
+  "03.png": { stats:{ social:2, craft:1, luck:1 }, traits:["practical","hustler","neat"], likes:["tapestries","mapmaking"], dislikes:["wasted metal","crowds (too many)"] },
+  "05.png": { stats:{ social:2, craft:1, luck:1 }, traits:["practical","merchant-minded"], likes:["coins","well-made boots"], dislikes:["sticky ale"] },
+  "06.png": { stats:{ scholar:4, arcana:3, physique:-1, grit:-1 }, traits:["mystic","elderly","bookish"], likes:["quiet libraries","sacred texts","carved runes"], dislikes:["crowds","bright noon light"] },
+  "07.png": { stats:{ craft:4, physique:3, grit:2 }, traits:["smithy","soot-stained","hardworking"], likes:["fresh anvils","hot forge smoke"], dislikes:["rust","blunted weapons"] },
+  "11.png": { stats:{ physique:5, martial:2, social:1 }, traits:["chadly","confident","loud"], likes:["pit fights","storms"], dislikes:["quiet libraries"] },
+};
+
+const HAT_RULES = {
+  "01.png": { stats:{ martial:3, grit:2, physique:1 }, titlePrefix:["Ironcrowned","Helm-Bound","Steel-Disciplined"], traits:["chain-of-command"], likes:["old battle banners"], dislikes:["squeaky armor"] },
+  "02.png": { stats:{ luck:3, social:1 }, titlePrefix:["Coin-Tossed","Fur-Crowned","Dice-Blessed"], traits:["gambler"], likes:["coins","warm pints"], dislikes:["tax collectors"] },
+  "03.png": { stats:{ grit:1, social:1 }, titlePrefix:["Mud-Humble","Bread-Hatted"], traits:["stubborn"], likes:["mushroom farms"], dislikes:["elven food"] },
+  "05.png": { stats:{ arcana:6, physique:2, grit:1 }, titlePrefix:["Cauldron-Sainted","Brew-Crowned","Hex-Pot"], traits:["dangerous","volatile"], likes:["strange artifacts","glowing fungi"], dislikes:["spiders"] },
+  "06.png": { stats:{ luck:5, grit:1 }, titlePrefix:["Bucket-Blessed","Accident-Proof","Dome-Protected"], traits:["reckless"], likes:["hazards","storms"], dislikes:["instructions"] },
+  "07.png": { stats:{ martial:3, grit:2, physique:1 }, titlePrefix:["War-Helmed","Ironcrowned","Siege-Ready"], traits:["unyielding"], likes:["weapon racks"], dislikes:["wet socks"] },
+  "08.png": { stats:{ arcana:4, luck:3 }, titlePrefix:["Flame-Bearing","Candle-Seer","Omen-Lit"], traits:["fey-touched"], likes:["sacred texts","underground rivers"], dislikes:["wind"] },
+  "09.png": { stats:{ scholar:4, craft:1 }, titlePrefix:["Professorial","Ink-Crowned","Scribe-Hatted"], traits:["pretentious"], likes:["quiet libraries","mapmaking"], dislikes:["long speeches (by others)"] },
+};
+
+const HAT_TITLE_PREFIX_POOL = [
+  "Helm-Bound","Ironcrowned","Cave-Knighted","Bucket-Headed",
+  "Rune-Capped","Ash-Visored","Dome-Protected",
+  "Head-God-Blessed","Accident-Prevented","Safety-Obsessed",
+  "Candle-Seer","Cauldron-Sainted","Dice-Blessed","Ink-Crowned"
+];
+
 const PART_RULES = {
   eyes: {
-    "01.png": { stats:{grit:3, martial:1}, traits:["temperamental","volatile","angry"] },
-    "02.png": { stats:{social:3}, traits:["aloof","dim","dopey"] },
-    "03.png": { stats:{social:2, scholar:1}, traits:["alert","twitchy","derpy"] },
+    "01.png": { stats:{grit:2, martial:1}, traits:["temperamental","volatile","angry"] },
+    "02.png": { stats:{social:2}, traits:["aloof","dim","dopey"] },
+    "03.png": { stats:{social:1, scholar:1}, traits:["alert","twitchy","derpy"] },
     "04.png": { stats:{}, traits:[] },
-    "05.png": { stats:{scholar:3}, traits:["attentive","intelligent","somber"] },
-    "06.png": { stats:{grit:3, scholar:1}, traits:["solemn","quiet","reserved"] },
-    "07.png": { stats:{martial:3, grit:1}, traits:["alert","unhinged","intense"] },
-    "08.png": { stats:{grit:2, martial:1}, traits:["stoic","reserved","bored"] },
-    "09.png": { stats:{scholar:2, grit:1}, traits:["distant","spacey","withdrawn"] },
-    "10.png": { stats:{scholar:1, social:1}, traits:["fey-touched","vacant","trance-like"] },
+    "05.png": { stats:{scholar:2}, traits:["attentive","intelligent","somber"] },
+    "06.png": { stats:{grit:2, scholar:1}, traits:["solemn","quiet","reserved"] },
+    "07.png": { stats:{martial:2, grit:1}, traits:["alert","unhinged","intense"] },
+    "08.png": { stats:{grit:1, martial:1}, traits:["stoic","reserved","bored"] },
+    "09.png": { stats:{scholar:2}, traits:["distant","spacey","withdrawn"] },
+    "10.png": { stats:{arcana:2, scholar:1}, traits:["fey-touched","vacant","trance-like"] },
   },
   mouth: {
-    "01.png": { stats:{grit:3, martial:1}, traits:["disinterested","somber","guarded"] },
-    "02.png": { stats:{social:3, scholar:1}, traits:["jovial","eager","cheerful"] },
+    "01.png": { stats:{grit:2, martial:1}, traits:["disinterested","somber","guarded"] },
+    "02.png": { stats:{social:2, scholar:1}, traits:["jovial","eager","cheerful"] },
     "03.png": { stats:{social:3}, traits:["flirtatious","affectionate","warm"] },
     "04.png": { stats:{}, traits:[] },
-    "05.png": { stats:{grit:3, scholar:1}, traits:["slack-jawed","vacant","fey-touched"] },
-    "06.png": { stats:{martial:3, grit:1}, traits:["stoic","aggressive","resolute"] },
-    "07.png": { stats:{social:1}, traits:["dopey","slow","simple"] },
+    "05.png": { stats:{arcana:2, scholar:1}, traits:["slack-jawed","vacant","fey-touched"] },
+    "06.png": { stats:{martial:2, grit:1}, traits:["stoic","aggressive","resolute"] },
+    "07.png": { stats:{luck:1, social:1}, traits:["dopey","slow","simple"] },
   },
   brows: {
-    "01.png": { stats:{grit:2, scholar:1} },
-    "02.png": { stats:{grit:3, scholar:1} },
-    "03.png": { stats:{grit:3} },
+    "01.png": { stats:{grit:1, scholar:1} },
+    "02.png": { stats:{grit:2, scholar:1} },
+    "03.png": { stats:{grit:2} },
     "04.png": { stats:{} },
-    "05.png": { stats:{scholar:3} },
-    "06.png": { stats:{scholar:3, grit:1} },
-    "07.png": { stats:{grit:3} },
+    "05.png": { stats:{scholar:2} },
+    "06.png": { stats:{scholar:2, grit:1} },
+    "07.png": { stats:{grit:2} },
   },
   nose: {
     "01.png": { stats:{martial:1} },
@@ -705,7 +913,7 @@ const PART_RULES = {
     "04.png": { stats:{}, traits:[] },
     "05.png": { stats:{scholar:1}, traits:["astute","pretentious"] },
     "06.png": { stats:{social:1}, traits:["loud","unhinged"] },
-    "07.png": { stats:{social:1}, traits:["emotional","reserved"] },
+    "07.png": { stats:{grit:1}, traits:["emotional","reserved"] },
   }
 };
 
@@ -725,15 +933,32 @@ const QUIRKS_POOL = [
   "likes his baths freezing","hums battle songs while cooking","won't sleep without a helmet nearby",
   "counts gemstones to calm down","keeps a secret map of forbidden tunnels",
   "gets emotional over old statues","refuses to throw away broken tools",
+  "refuses to step on cracks","laughs at funerals","blames everything on elves",
+  "collects teeth (no reason)","keeps 7 spoons at all times","can’t stop gambling with beetles",
+  "names every pickaxe","has beef with ladders","thinks statues are listening",
+  "insists on testing every chair","believes mushrooms are government spies",
+  "starts fights over grammar","wants to be a bard but can’t sing",
+  "runs everywhere for no reason","fears open doors","keeps a pet rock named ‘King’",
+  "writes love letters to the forge","holds grudges against clouds",
+  "claims to have met a dragon (probably lied)","wins arguments by shouting ‘TRADITION!’",
+  "refuses to walk under banners","sleeps in boots","collects lint like treasure",
+  "talks to magma like it’s a friend","eats only ‘triangle foods’",
 ];
 
 const LIKES_POOL = [
   "ancient tombs","warm pints","insects","cave moss","polished stone","rain smell",
   "quiet libraries","forges at dawn","songs by the fire","mapmaking","underground rivers",
-  "carved runes","strange artifacts","mushroom farms",
+  "carved runes","strange artifacts","mushroom farms","tasty mold",
   "raspberries","storms","forests","precious gems","legendary items","singing","choirs","dust",
   "fresh anvils","braided beards (on others)","glowing fungi","well-made boots",
-  "hot forge smoke","old battle banners",
+  "hot forge smoke","old battle banners","kobolds","critters","tapestries","sacred texts","cider","lava","cavern streams","fishing",
+  "coin stacks","rare buttons","perfectly round stones","fresh parchment","ink stains",
+  "dangerous tunnels","mystery doors","secret levers","trap mechanisms","battle drills",
+  "grudges","proper uniforms","helmet collections","mushroom wine","spicy cave stew",
+  "well-cut gems","new pickaxes","tool belts","guild stamps","market gossip",
+  "weird hats","minor hexes","lucky charms","old maps","stolen elven bread (as a joke)",
+  "dramatic entrances","glorious mustaches","tiny statues","giant statues",
+  "making lists","breaking lists","candlelight rituals","overpriced trinkets",
 ];
 
 const DISLIKES_POOL = [
@@ -741,47 +966,23 @@ const DISLIKES_POOL = [
   "goblin laughter","spiders","surface rain","crowds","wasted metal","cold soup","bad boots",
   "rust","dampness","messy beds","dishes","splintered shields","blunted weapons",
   "forgotten beasts","tangled braids","short beards","squeaky armor","wet socks",
-  "cracked mugs","flimsy ropes","mushrooms that look at you funny",
+  "cracked mugs","flimsy ropes","mushrooms that look at you funny","elven food",
+  "quiet sarcasm","being told to ‘calm down’","taxes","paper cuts","weak hinges",
+  "unlabeled levers","mysterious dripping noises","bad dice","cheap candles",
+  "soft chairs","tiny talkers","people who whistle","wet gloves","sand",
+  "surface birds","being asked to smile","unseasoned stew","fake gemstones",
+  "fragile mugs","soft helmets","helmets with opinions","wind",
 ];
 
+/* =========================
+   UTIL
+========================= */
 function rand(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
 function capWord(s){
   const w = String(s || "").trim();
   if (!w) return "";
   return w[0].toUpperCase() + w.slice(1).toLowerCase();
-}
-function chooseRole(stats){
-  const top = maxKey(stats);
-  const tier = weightedTier(stats);
-  if (top === "martial") return `${tier} Soldier (${rand(MARTIAL_WEAPONS)})`;
-  if (top === "scholar"){
-    const scholarRoles = ["Librarian","Historian","Poet","Musician","Scribe","Archivist"];
-    const spec = (Math.random()<0.55) ? ` (${rand(["runes","wars","tombs","myth","beasts","maps"])})` : "";
-    return `${tier} ${rand(scholarRoles)}${spec}`;
-  }
-  if (top === "social"){
-    const socialRoles = ["Bard","Trader","Innkeeper","Diplomat","Storyteller","Brew-Crier"];
-    return `${tier} ${rand(socialRoles)}`;
-  }
-  const gritRoles = ["Miner","Scout","Mercenary","Gravedigger","Tunnel Guard","Stone-hauler"];
-  return `${tier} ${rand(gritRoles)}`;
-}
-function weightedTier(stats){
-  const total = (stats.martial|0)+(stats.scholar|0)+(stats.social|0)+(stats.grit|0);
-  const t = Math.max(0, Math.min(1, total/12));
-  const idx = Math.floor((Math.random()*0.65 + t*0.85) * (ROLE_TIERS.length-1));
-  return ROLE_TIERS[Math.max(0, Math.min(ROLE_TIERS.length-1, idx))];
-}
-function maxKey(stats){
-  const entries = Object.entries(stats);
-  entries.sort((a,b)=> (b[1]||0)-(a[1]||0));
-  return entries[0]?.[0] || "grit";
-}
-function statZero(){ return {martial:0, scholar:0, social:0, grit:0}; }
-function addStats(dst, src){
-  if (!src) return;
-  for (const k of ["martial","scholar","social","grit"]) dst[k] = (dst[k]||0) + (src[k]||0);
 }
 function uniq(arr){
   const out = [];
@@ -802,49 +1003,124 @@ function sampleFromPool(pool, n){
   }
   return out;
 }
-function sampleLikes(stats, n){
-  const bias = [];
-  if (stats.scholar > stats.martial) bias.push("quiet libraries","carved runes","mapmaking","strange artifacts");
-  if (stats.martial >= stats.scholar) bias.push("forges at dawn","polished stone","legendary items");
-  if (stats.social >= 2) bias.push("songs by the fire","warm pints","singing","choirs");
-  if (stats.grit >= 2) bias.push("underground rivers","cave moss","ancient tombs","dust");
-  const mixed = uniq([...bias, ...LIKES_POOL]);
-  return sampleFromPool(mixed, n);
+function statZero(){
+  const s = {};
+  for (const k of STATS_KEYS) s[k] = 0;
+  return s;
 }
-function sampleDislikes(stats, n){
-  const bias = [];
-  if (stats.scholar >= 3) bias.push("crowds","long speeches","messy beds","dishes");
-  if (stats.martial >= 3) bias.push("wasted metal","blunted weapons","splintered shields","rust");
-  if (stats.social <= 1) bias.push("crowds");
-  if (stats.grit >= 3) bias.push("bright noon light","surface rain","dampness");
-  const mixed = uniq([...bias, ...DISLIKES_POOL]);
-  return sampleFromPool(mixed, n);
+function addStats(dst, src){
+  if (!src) return;
+  for (const k of STATS_KEYS){
+    if (typeof src[k] === "number" && !Number.isNaN(src[k])) dst[k] = (dst[k]||0) + src[k];
+  }
 }
-function sampleQuirks(stats, n){
-  const bias = [];
-  if (stats.scholar >= 3) bias.push("savant","writes bad poetry at night","argues with statues","wants to experiment with new stones");
-  if (stats.martial >= 3) bias.push("warmonger","master war-planner","grinds teeth","hopes to slay a forgotten beast");
-  if (stats.social >= 3) bias.push("mutters to self","hoards buttons","likes jewelry");
-  if (stats.grit >= 3) bias.push("never bathes","refuses to eat soup","likes his baths freezing");
-  const mixed = uniq([...bias, ...QUIRKS_POOL]);
-  return sampleFromPool(mixed, n);
+function normalizeStats(stats){
+  for (const k of STATS_KEYS){
+    const v = Number(stats[k] || 0);
+    stats[k] = clamp(Math.round(v), STAT_MIN, STAT_MAX);
+  }
 }
-function makeProfileLine(stats, reads, quirks){
-  const top = maxKey(stats);
-  const vibe = (top==="martial") ? "battle-minded" :
-               (top==="scholar") ? "bookish" :
-               (top==="social") ? "gregarious" : "unyielding";
-  const q = quirks.length ? quirks.join(", ") : "none";
-  return `${vibe} dwarf. Reads as: ${reads}. Quirks: ${q}.`;
+function maxKey(stats){
+  const entries = Object.entries(stats);
+  entries.sort((a,b)=> (b[1]||0)-(a[1]||0));
+  return entries[0]?.[0] || "grit";
+}
+function topTwoKeys(stats){
+  const entries = Object.entries(stats);
+  entries.sort((a,b)=> (b[1]||0)-(a[1]||0));
+  const a = entries[0]?.[0] || "grit";
+  const b = entries[1]?.[0] || "martial";
+  return [a,b];
+}
+function sumStats(stats){
+  let t=0;
+  for (const k of STATS_KEYS) t += (stats[k]||0);
+  return t;
+}
+function weightedTier(stats){
+  const total = sumStats(stats);
+  const t = Math.max(0, Math.min(1, total/28));
+  const idx = Math.floor((Math.random()*0.60 + t*0.95) * (ROLE_TIERS.length-1));
+  return ROLE_TIERS[Math.max(0, Math.min(ROLE_TIERS.length-1, idx))];
 }
 
 /* =========================
-   NAME GENERATOR (male/female first lists)
+   HYBRID ROLES
 ========================= */
-const NAME_FIRST_M = ["Theeb","Thogrin","Oflin","Urist","Borgrim","Thoon","Kirst","Kanon","Furt","Lum","Barth","Marthon","Morgrin","Bathlam"];
-const NAME_FIRST_F = ["Ushat","Domas","Iton","Tosid","Rigoth","Mistem","Zaneg","Erith","Stukos","Sodel","Thikut","Nil","Meng","Atir","Kadôl","Iden"];
-const LAST_PREFIX = ["Vault","Stone","Iron","Gold","Rune","Oath","Grim","Forge","Ale","Boulder","Anvil","Pick","Deep","Cave","Moss","Ash","Oak"];
-const LAST_SUFFIX = ["Strider","Brow","Singer","Hammer","Shield","Seeker","Delver","Hewer","Carver","Scribe","Watcher","Binder","Rider","Warden","Mender","Keeper"];
+function chooseHybridRole(stats){
+  const [a,b] = topTwoKeys(stats);
+  const tier = weightedTier(stats);
+  const pair = [a,b].sort().join("+");
+
+  const table = {
+    "martial+physique":  () => `${tier} Pit Fighter`,
+    "martial+grit":      () => `${tier} Tunnel Vanguard`,
+    "martial+craft":     () => `${tier} Siege Smith`,
+    "martial+scholar":   () => `${tier} War Scholar`,
+    "martial+arcana":    () => `${tier} Hexblade`,
+    "martial+social":    () => `${tier} Captain-Envoy`,
+    "martial+luck":      () => `${tier} Doom-Proof Raider`,
+
+    "physique+grit":     () => `${tier} Stonehauler`,
+    "physique+craft":    () => `${tier} Foundry Hand`,
+    "physique+scholar":  () => `${tier} Anatomist`,
+    "physique+arcana":   () => `${tier} Blood Ritualist`,
+    "physique+social":   () => `${tier} Tavern Bouncer`,
+    "physique+luck":     () => `${tier} Lucky Ox`,
+
+    "grit+craft":        () => `${tier} Deepwright`,
+    "grit+scholar":      () => `${tier} Cartographer`,
+    "grit+arcana":       () => `${tier} Curse-Bearer`,
+    "grit+social":       () => `${tier} Trail Broker`,
+    "grit+luck":         () => `${tier} Cave Survivor`,
+
+    "craft+scholar":     () => `${tier} Runesmith`,
+    "craft+arcana":      () => `${tier} Totemwright`,
+    "craft+social":      () => `${tier} Guild Artisan`,
+    "craft+luck":        () => `${tier} Improviser`,
+
+    "scholar+arcana":    () => `${tier} Rune-Seer`,
+    "scholar+social":    () => `${tier} Court Scribe`,
+    "scholar+luck":      () => `${tier} Accidental Genius`,
+
+    "arcana+social":     () => `${tier} Charm-Hexer`,
+    "arcana+luck":       () => `${tier} Omen Magnet`,
+
+    "luck+social":       () => `${tier} Barroom Celebrity`,
+  };
+
+  const fn = table[pair];
+  if (fn) return fn();
+
+  const top = maxKey(stats);
+  if (top === "martial") return `${tier} Soldier (${rand(MARTIAL_WEAPONS)})`;
+  if (top === "physique") return `${tier} Bruiser`;
+  if (top === "grit") return `${tier} Miner`;
+  if (top === "craft") return `${tier} Smith`;
+  if (top === "scholar") return `${tier} Archivist`;
+  if (top === "arcana") return `${tier} Occult Dabbler`;
+  if (top === "social") return `${tier} Trader`;
+  if (top === "luck") return `${tier} Hazard Magnet`;
+  return `${tier} Delver`;
+}
+
+function applyHatTitlePrefix(role, hatFile){
+  if (!hatFile || hatFile === NONE_FILENAME) return role;
+  const rule = HAT_RULES[hatFile];
+  let prefix = "";
+  if (rule?.titlePrefix?.length) prefix = rand(rule.titlePrefix);
+  else prefix = rand(HAT_TITLE_PREFIX_POOL);
+  if (Math.random() < 0.38) return `${prefix} ${role}`;
+  return role;
+}
+
+/* =========================
+   NAME GENERATOR
+========================= */
+const NAME_FIRST_M = ["Theeb","Thogrin","Oflin","Urist","Borgrim","Thoon","Kirst","Kanon","Furt","Lum","Barth","Marthon","Morgrin","Bathlam","Doren","Kreg","Stodir","Thim","Rogath"];
+const NAME_FIRST_F = ["Ushat","Domas","Iton","Tosid","Rigoth","Mistem","Zaneg","Erith","Stukos","Sodel","Thikut","Nil","Meng","Atir","Kadôl","Iden","Likot","Thola","Rith","Zasit"];
+const LAST_PREFIX = ["Vault","Stone","Iron","Gold","Rune","Oath","Grim","Forge","Ale","Boulder","Anvil","Pick","Deep","Cave","Moss","Ash","Oak","Cinder","Keg","Hammer","Grit"];
+const LAST_SUFFIX = ["Strider","Brow","Singer","Hammer","Shield","Seeker","Delver","Hewer","Carver","Scribe","Watcher","Binder","Rider","Warden","Mender","Keeper","Guzzler","Mason","Wright","Banner"];
 
 function randomSurname(){
   let pre = rand(LAST_PREFIX);
@@ -853,15 +1129,9 @@ function randomSurname(){
   while (pre.toLowerCase() === suf.toLowerCase() && guard++ < 10) suf = rand(LAST_SUFFIX);
   return `${capWord(pre)}${capWord(suf)}`;
 }
-function randomFirstByGender(g){
-  return capWord(rand(g === "female" ? NAME_FIRST_F : NAME_FIRST_M));
-}
-function makeFullName(first, surname){
-  return `${capWord(first)} ${capWord(surname)}`;
-}
-function randomNameByGender(g){
-  return makeFullName(randomFirstByGender(g), randomSurname());
-}
+function randomFirstByGender(g){ return capWord(rand(g === "female" ? NAME_FIRST_F : NAME_FIRST_M)); }
+function makeFullName(first, surname){ return `${capWord(first)} ${capWord(surname)}`; }
+function randomNameByGender(g){ return makeFullName(randomFirstByGender(g), randomSurname()); }
 function randomAge(){
   const r = Math.random();
   if (r < 0.65) return 18 + Math.floor(Math.random()*60);
@@ -882,7 +1152,6 @@ const rpgCtx = rpgCanvas.getContext("2d");
 const ftCanvas = $("ft");
 const ftCtx = ftCanvas.getContext("2d");
 
-/* ✅ crest canvas */
 const crestCanvas = $("crest");
 const crestCtx = crestCanvas.getContext("2d");
 
@@ -890,18 +1159,8 @@ const crestCtx = crestCanvas.getContext("2d");
    GENDER STATE / ASSETS
 ========================= */
 const GENDERS = {
-  male: {
-    root: MALE_ROOT,
-    categories: MALE_CATEGORIES,
-    layerOrder: MALE_LAYER_ORDER,
-    noneKeys: MALE_NONE_KEYS
-  },
-  female: {
-    root: FEMALE_ROOT,
-    categories: FEMALE_CATEGORIES,
-    layerOrder: FEMALE_LAYER_ORDER,
-    noneKeys: FEMALE_NONE_KEYS
-  }
+  male: { root: MALE_ROOT, categories: MALE_CATEGORIES, layerOrder: MALE_LAYER_ORDER, noneKeys: MALE_NONE_KEYS },
+  female:{ root: FEMALE_ROOT, categories: FEMALE_CATEGORIES, layerOrder: FEMALE_LAYER_ORDER, noneKeys: FEMALE_NONE_KEYS }
 };
 
 let activeGender = "male";
@@ -909,35 +1168,182 @@ let stateByGender = { male: {}, female: {} };
 const assetsByGender = { male: {}, female: {} };
 let totalLoaded = 0;
 
-/* ✅ separate names/ages per gender */
 let bioByGender = {
   male: { name:"", age:"" },
   female: { name:"", age:"" }
 };
 
+let locksByGender = {
+  male:   { hairColor:"black", skinColor:"brown" },
+  female: { hairColor:"black", skinColor:"brown" }
+};
+
 function CATS(){ return GENDERS[activeGender].categories; }
 function LAYERS(){ return GENDERS[activeGender].layerOrder; }
-function ROOT(){ return GENDERS[activeGender].root; }
-function NONE_KEYS(){ return GENDERS[activeGender].noneKeys; }
-function STATE(){ return stateByGender[activeGender]; }
-function ASSETS(){ return assetsByGender[activeGender]; }
+function ROOT(g=activeGender){ return GENDERS[g].root; }
+function NONE_KEYS(g=activeGender){ return GENDERS[g].noneKeys; }
+function STATE(g=activeGender){ return stateByGender[g]; }
+function ASSETS(g=activeGender){ return assetsByGender[g]; }
+
+function isHairColorKey(gender, key){
+  const set = new Set(gender === "female" ? HAIR_COLOR_KEYS_FEMALE : HAIR_COLOR_KEYS_MALE);
+  return set.has(key);
+}
+function isSkinColorKey(key){ return SKIN_COLOR_KEYS.includes(key); }
+function isColorizedCategory(gender, key){
+  if (key === MISC_ITEM_KEY) return false;
+  return isSkinColorKey(key) || isHairColorKey(gender, key);
+}
 
 function pathJoin(root, folder, file){
   const r = String(root || "").trim();
   if (!r) return `${folder}/${file}`;
   return `${r}/${folder}/${file}`;
 }
+function pathJoinSub(root, folder, sub, file){
+  const r = String(root || "").trim();
+  if (!r) return `${folder}/${sub}/${file}`;
+  return `${r}/${folder}/${sub}/${file}`;
+}
 
 /* =========================
    CREST STATE / ASSETS
 ========================= */
-const crestAssets = {}; // { back:[{src,img}], ... }
-const crestState = { back:0, color:0, pattern1:0, pattern2:0, pattern3:0 }; // ✅ added pattern3
-
+const crestAssets = {};
+const crestState = { back:0, color:0, pattern1:0, pattern2:0, pattern3:0 };
 function crestPath(folder, file){
   const r = String(CREST_ROOT || "").trim();
   if (!r) return `${folder}/${file}`;
   return `${r}/${folder}/${file}`;
+}
+
+/* =========================
+   LIST ACCESS HELPERS
+========================= */
+function getActiveColorForKey(gender, key){
+  if (isSkinColorKey(key)) return locksByGender[gender].skinColor || "brown";
+  if (isHairColorKey(gender, key)) return locksByGender[gender].hairColor || "black";
+  return "";
+}
+function getListFor(gender, key){
+  const obj = assetsByGender[gender][key];
+  if (!obj) return [];
+  if (obj.type === "flat") return obj.list || [];
+  if (obj.type === "color"){
+    const c = getActiveColorForKey(gender, key);
+    const by = obj.byColor || {};
+    return by[c] || [];
+  }
+  return [];
+}
+function getListAnyColor(gender, key){
+  const obj = assetsByGender[gender][key];
+  if (!obj) return [];
+  if (obj.type === "flat") return obj.list || [];
+  if (obj.type === "color"){
+    const by = obj.byColor || {};
+    for (const k of Object.keys(by)){
+      if (by[k]?.length) return by[k];
+    }
+  }
+  return [];
+}
+function availableColorsForKey(gender, key, palette){
+  const obj = assetsByGender[gender][key];
+  if (!obj || obj.type !== "color") return [];
+  const by = obj.byColor || {};
+  const out = [];
+  for (const c of palette){
+    if ((by[c] || []).length) out.push(c);
+  }
+  return out;
+}
+
+/* =========================
+   MISC BODY + AUTO MISC-ITEM SYNC
+========================= */
+function selectedSrcForState(gender, key, st){
+  const list = getListFor(gender, key);
+  const idx = st?.[key] ?? 0;
+  return list[idx]?.src || "";
+}
+function isMiscBodySelectedForState(gender, st){
+  const src = selectedSrcForState(gender, "body", st);
+  return src.includes(`/body/${UNIVERSAL_BODY_SUBFOLDER}/`) || src.includes(`body/${UNIVERSAL_BODY_SUBFOLDER}/`);
+}
+function isMiscBodySelected(gender){
+  return isMiscBodySelectedForState(gender, STATE(gender));
+}
+function isMiscUnlocked(gender){
+  return isMiscBodySelected(gender);
+}
+function extract2DigitFromFilename(fn){
+  const m = String(fn||"").match(/(\d{2})\.png$/i);
+  return m ? m[1] : "";
+}
+function findNoneIndexForGender(gender, key){
+  const list = getListFor(gender, key);
+  for (let i=0;i<list.length;i++){
+    if (list[i]?.none) return i;
+  }
+  return 0;
+}
+function setMiscItemFromBody(gender, st){
+  const hasMiscKey = GENDERS[gender].categories.some(c=>c.key===MISC_ITEM_KEY);
+  if (!hasMiscKey) return;
+
+  const miscList = getListFor(gender, MISC_ITEM_KEY);
+  if (!miscList.length){
+    st[MISC_ITEM_KEY] = 0;
+    return;
+  }
+
+  const noneIdx = findNoneIndexForGender(gender, MISC_ITEM_KEY);
+
+  if (!isMiscBodySelectedForState(gender, st)){
+    st[MISC_ITEM_KEY] = noneIdx;
+    return;
+  }
+
+  const bodySrc = selectedSrcForState(gender, "body", st);
+  const bodyFn = (bodySrc.split("/").pop() || "");
+  const num = extract2DigitFromFilename(bodyFn);
+
+  if (num){
+    const target = `${num}.png`;
+    const matchIdx = miscList.findIndex(it => ((it?.src || "").split("/").pop() || "") === target);
+    if (matchIdx >= 0){
+      st[MISC_ITEM_KEY] = matchIdx;
+      return;
+    }
+  }
+
+  if (miscList.length <= 1) st[MISC_ITEM_KEY] = noneIdx;
+  else {
+    let tries = 0;
+    let pick = Math.floor(Math.random()*miscList.length);
+    while (tries++ < 12 && (miscList[pick]?.none)) pick = Math.floor(Math.random()*miscList.length);
+    st[MISC_ITEM_KEY] = pick;
+  }
+}
+
+/* =========================
+   BLINK: find eyes/05 index after loading
+========================= */
+function findClosedEyeIndexForGender(g){
+  const list = getListFor(g, "eyes");
+  if (!list.length) return -1;
+  for (let i=0;i<list.length;i++){
+    const fn = (list[i]?.src || "").split("/").pop() || "";
+    if (fn === BLINK_EYES_FILENAME) return i;
+  }
+  return -1;
+}
+function refreshBlinkClosedIndex(g){
+  blinkByGender[g].closedIdx = findClosedEyeIndexForGender(g);
+  blinkByGender[g].t = 0;
+  blinkByGender[g].activeUntil = 0;
+  blinkByGender[g].next = 0;
 }
 
 /* =========================
@@ -961,16 +1367,21 @@ function buildControls() {
     const btnL = document.createElement("button");
     btnL.type = "button";
     btnL.textContent = "<";
-    btnL.addEventListener("click", () => step(cat.key, -1));
 
     const readout = document.createElement("div");
     readout.className = "readout";
     readout.id = `readout_${cat.key}`;
-    readout.textContent = "…";
+    readout.textContent = "0/0";
 
     const btnR = document.createElement("button");
     btnR.type = "button";
     btnR.textContent = ">";
+
+    const locked = (cat.key === MISC_ITEM_KEY) && !isMiscUnlocked(activeGender);
+    btnL.disabled = locked;
+    btnR.disabled = locked;
+
+    btnL.addEventListener("click", () => step(cat.key, -1));
     btnR.addEventListener("click", () => step(cat.key, +1));
 
     row.appendChild(label);
@@ -982,15 +1393,21 @@ function buildControls() {
 }
 
 function setReadout(key) {
-  const list = ASSETS()[key] || [];
-  const idx = STATE()[key] ?? 0;
   const el = $(`readout_${key}`);
   if (!el) return;
 
-  if (list.length === 0) { el.textContent = "(none)"; return; }
-  const item = list[idx];
-  const name = (item?.src || "").split("/").pop() || "";
-  el.textContent = `${idx + 1}/${list.length}  ${item?.none ? "NONE" : name}`;
+  if (key === MISC_ITEM_KEY && !isMiscUnlocked(activeGender)){
+    el.textContent = "LOCKED";
+    return;
+  }
+
+  const list = getListFor(activeGender, key);
+  const idx = STATE()[key] ?? 0;
+
+  if (list.length === 0) { el.textContent = "0/0"; return; }
+
+  const shown = clamp(idx + 1, 1, list.length);
+  el.textContent = `${shown}/${list.length}`;
 }
 
 /* =========================
@@ -1005,57 +1422,184 @@ function tryPreloadImage(src) {
   });
 }
 
-async function scanFolderForGender(gender, cat) {
+/* ✅ MISC folder tolerant loader: tries candidates for misc_item */
+async function tryPreloadMiscCandidate(root, file){
+  for (const folder of MISC_ITEM_FOLDER_CANDIDATES){
+    const src = pathJoin(root, folder, file);
+    const img = await tryPreloadImage(src);
+    if (img) return { src, img, folder };
+  }
+  return null;
+}
+
+async function scanFlatFolderForGender(gender, cat){
   const key = cat.key;
-  const genderCfg = GENDERS[gender];
-  const root = genderCfg.root;
-  const noneKeys = genderCfg.noneKeys;
+  const root = ROOT(gender);
+  const noneKeys = NONE_KEYS(gender);
 
-  assetsByGender[gender][key] = [];
+  assetsByGender[gender][key] = { type:"flat", list:[] };
+  const list = assetsByGender[gender][key].list;
+
   let misses = 0;
-
   for (let i = 1; i <= MAX_SCAN; i++) {
     const num = String(i).padStart(2, "0");
-    const src = pathJoin(root, cat.folder, `${num}.png`);
+    const file = `${num}.png`;
 
-    const img = await tryPreloadImage(src);
+    let src = "";
+    let img = null;
+
+    if (key === MISC_ITEM_KEY){
+      const hit = await tryPreloadMiscCandidate(root, file);
+      if (hit){
+        src = hit.src;
+        img = hit.img;
+      }
+    } else {
+      src = pathJoin(root, cat.folder, file);
+      img = await tryPreloadImage(src);
+    }
+
     if (img) {
       misses = 0;
-
       const isNone = noneKeys.has(key) && src.endsWith("/" + NONE_FILENAME);
-      if (isNone) assetsByGender[gender][key].unshift({ src, img, none:true });
-      else assetsByGender[gender][key].push({ src, img, none:false });
+      if (isNone) list.unshift({ src, img, none:true });
+      else list.push({ src, img, none:false });
 
       totalLoaded++;
       $("loadedCount").textContent = String(totalLoaded);
       $("loadInfo").textContent = `assets: ${totalLoaded}`;
     } else {
       misses++;
-      if (misses >= STOP_AFTER_CONSECUTIVE_MISSES && assetsByGender[gender][key].length > 0) break;
+      if (misses >= STOP_AFTER_CONSECUTIVE_MISSES && list.length > 0) break;
     }
   }
 
-  const st = stateByGender[gender];
-  if (assetsByGender[gender][key].length === 0) st[key] = 0;
-  else st[key] = Math.max(0, Math.min(st[key] ?? 0, assetsByGender[gender][key].length - 1));
+  const st = STATE(gender);
+  if (!list.length) st[key] = 0;
+  else st[key] = Math.max(0, Math.min(st[key] ?? 0, list.length - 1));
 
   if (gender === activeGender) setReadout(key);
+}
+
+/* ✅ scan body/misc and append to every color */
+async function scanUniversalBodyMiscForGender(gender, cat){
+  const root = ROOT(gender);
+  const noneKeys = NONE_KEYS(gender);
+  const miscList = [];
+  let misses = 0;
+
+  for (let i=1;i<=MAX_SCAN;i++){
+    const num = String(i).padStart(2,"0");
+    const src = pathJoinSub(root, cat.folder, UNIVERSAL_BODY_SUBFOLDER, `${num}.png`);
+    const img = await tryPreloadImage(src);
+    if (img){
+      misses = 0;
+      const isNone = noneKeys.has(cat.key) && src.endsWith("/" + NONE_FILENAME);
+      if (isNone) miscList.unshift({ src, img, none:true, universal:true });
+      else miscList.push({ src, img, none:false, universal:true });
+
+      totalLoaded++;
+      $("loadedCount").textContent = String(totalLoaded);
+      $("loadInfo").textContent = `assets: ${totalLoaded}`;
+    } else {
+      misses++;
+      if (misses >= STOP_AFTER_CONSECUTIVE_MISSES && miscList.length > 0) break;
+    }
+  }
+  return miscList;
+}
+
+async function scanColorFolderForGender(gender, cat){
+  const key = cat.key;
+  const root = ROOT(gender);
+  const noneKeys = NONE_KEYS(gender);
+  const palette = isSkinColorKey(key) ? SKIN_COLORS : HAIR_COLORS;
+
+  assetsByGender[gender][key] = { type:"color", byColor:{} };
+  const byColor = assetsByGender[gender][key].byColor;
+
+  for (const color of palette){
+    byColor[color] = [];
+    let misses = 0;
+
+    for (let i = 1; i <= MAX_SCAN; i++){
+      const num = String(i).padStart(2, "0");
+      const src = pathJoinSub(root, cat.folder, color, `${num}.png`);
+
+      const img = await tryPreloadImage(src);
+      if (img){
+        misses = 0;
+        const isNone = noneKeys.has(key) && src.endsWith("/" + NONE_FILENAME);
+        if (isNone) byColor[color].unshift({ src, img, none:true });
+        else byColor[color].push({ src, img, none:false });
+
+        totalLoaded++;
+        $("loadedCount").textContent = String(totalLoaded);
+        $("loadInfo").textContent = `assets: ${totalLoaded}`;
+      } else {
+        misses++;
+        if (misses >= STOP_AFTER_CONSECUTIVE_MISSES && byColor[color].length > 0) break;
+      }
+    }
+  }
+
+  /* ✅ UNIVERSAL BODY: append body/misc into ALL skin colors */
+  if (key === "body"){
+    const miscBodies = await scanUniversalBodyMiscForGender(gender, cat);
+    if (miscBodies.length){
+      for (const color of SKIN_COLORS){
+        byColor[color] = [...(byColor[color] || []), ...miscBodies];
+      }
+    }
+  }
+
+  const st = STATE(gender);
+  const activeColor = getActiveColorForKey(gender, key);
+  const list = byColor[activeColor] || [];
+
+  if (!list.length){
+    let fallback = "";
+    for (const c of palette){
+      if ((byColor[c] || []).length){ fallback = c; break; }
+    }
+    if (fallback){
+      if (isSkinColorKey(key)) locksByGender[gender].skinColor = fallback;
+      if (isHairColorKey(gender, key)) locksByGender[gender].hairColor = fallback;
+    }
+  }
+
+  const finalList = getListFor(gender, key);
+  if (!finalList.length) st[key] = 0;
+  else st[key] = Math.max(0, Math.min(st[key] ?? 0, finalList.length - 1));
+
+  if (gender === activeGender) setReadout(key);
+}
+
+async function scanFolderForGender(gender, cat) {
+  if (isColorizedCategory(gender, cat.key)){
+    await scanColorFolderForGender(gender, cat);
+  } else {
+    await scanFlatFolderForGender(gender, cat);
+  }
 }
 
 async function loadGenderAssets(gender){
   for (const cat of GENDERS[gender].categories){
     await scanFolderForGender(gender, cat);
   }
-  const st = stateByGender[gender];
-  const as = assetsByGender[gender];
+
   for (const cat of GENDERS[gender].categories){
-    const list = as[cat.key] || [];
-    if (!list.length) st[cat.key] = 0;
-    else st[cat.key] = Math.max(0, Math.min(st[cat.key] ?? 0, list.length - 1));
+    const key = cat.key;
+    const list = getListFor(gender, key);
+    const st = STATE(gender);
+    if (!list.length) st[key] = 0;
+    else st[key] = Math.max(0, Math.min(st[key] ?? 0, list.length - 1));
   }
+
+  setMiscItemFromBody(gender, STATE(gender));
 }
 
-/* ✅ CREST loading */
+/* crest loading */
 async function scanCrestFolder(part){
   crestAssets[part.key] = [];
   let misses = 0;
@@ -1088,39 +1632,6 @@ async function loadCrestAssets(){
 }
 
 /* =========================
-   SEED (active gender only)
-========================= */
-function getSeedForGender(gender) {
-  const cats = GENDERS[gender].categories;
-  const st = stateByGender[gender];
-  return cats.map(c => String(st[c.key] ?? 0)).join("-");
-}
-function getSeed() { return getSeedForGender(activeGender); }
-
-function applySeed(seed) {
-  const cats = CATS();
-  const parts = seed.split("-").map(s => parseInt(s, 10));
-  if (parts.length !== cats.length || parts.some(n => Number.isNaN(n))) return false;
-
-  const st = STATE();
-  const as = ASSETS();
-  for (let i = 0; i < cats.length; i++) {
-    const key = cats[i].key;
-    const list = as[key] || [];
-    if (!list.length) { st[key] = 0; continue; }
-    st[key] = Math.max(0, Math.min(parts[i], list.length - 1));
-    setReadout(key);
-  }
-
-  saveState();
-  render();
-  updatePersonalityUI();
-  regenerateFamilyCache();
-  drawFamily();
-  return true;
-}
-
-/* =========================
    SAVE / LOAD
 ========================= */
 function syncBioFromInputs(){
@@ -1139,14 +1650,14 @@ function saveState() {
     activeGender,
     maleParts: {...stateByGender.male},
     femaleParts: {...stateByGender.female},
-    bioByGender: {...bioByGender}
+    bioByGender: {...bioByGender},
+    locksByGender: {...locksByGender}
   };
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(payload)); } catch {}
 
   const seed = getSeed();
   $("seedOut").textContent = seed;
   $("seedInput").value = seed;
-
   $("modeSub").textContent = activeGender.toUpperCase();
 }
 
@@ -1167,23 +1678,90 @@ function loadState() {
         female:{ name: String(obj.bioByGender.female?.name || ""), age: String(obj.bioByGender.female?.age || "") }
       };
     }
+
+    if (obj?.locksByGender && typeof obj.locksByGender === "object"){
+      locksByGender = {
+        male: {
+          hairColor: String(obj.locksByGender.male?.hairColor || locksByGender.male.hairColor),
+          skinColor: String(obj.locksByGender.male?.skinColor || locksByGender.male.skinColor),
+        },
+        female: {
+          hairColor: String(obj.locksByGender.female?.hairColor || locksByGender.female.hairColor),
+          skinColor: String(obj.locksByGender.female?.skinColor || locksByGender.female.skinColor),
+        }
+      };
+    }
   } catch {}
+}
+
+/* =========================
+   HELPERS
+========================= */
+function getSeedForGender(gender) {
+  const cats = GENDERS[gender].categories;
+  const st = STATE(gender);
+  return cats.map(c => String(st[c.key] ?? 0)).join("-");
+}
+function getSeed() { return getSeedForGender(activeGender); }
+
+function selectedFilenameFor(gender, key){
+  const list = getListFor(gender, key);
+  const idx = STATE(gender)[key] ?? 0;
+  const src = list[idx]?.src || "";
+  return src.split("/").pop() || "";
+}
+function selectedFilename(key){ return selectedFilenameFor(activeGender, key); }
+
+/* =========================
+   COLOR LOCK CHOOSERS
+========================= */
+function chooseSkinColorForGender(g){
+  const candidates = [];
+  for (const c of SKIN_COLORS){
+    let ok = true;
+    for (const key of SKIN_COLOR_KEYS){
+      const obj = ASSETS(g)[key];
+      if (!obj || obj.type !== "color") { ok = false; break; }
+      if (!((obj.byColor?.[c] || []).length)) { ok = false; break; }
+    }
+    if (ok) candidates.push(c);
+  }
+  if (candidates.length) locksByGender[g].skinColor = rand(candidates);
+}
+
+function chooseHairColorForGender(g){
+  const keys = (g==="female" ? HAIR_COLOR_KEYS_FEMALE : HAIR_COLOR_KEYS_MALE)
+    .filter(k => ASSETS(g)[k] && ASSETS(g)[k].type === "color");
+
+  if (!keys.length) return;
+
+  let candidates = HAIR_COLORS.slice();
+  for (const key of keys){
+    const avail = new Set(availableColorsForKey(g, key, HAIR_COLORS));
+    candidates = candidates.filter(c => avail.has(c));
+  }
+
+  if (candidates.length){ locksByGender[g].hairColor = rand(candidates); return; }
+
+  const hairAvail = availableColorsForKey(g, "hair", HAIR_COLORS);
+  if (hairAvail.length) locksByGender[g].hairColor = rand(hairAvail);
 }
 
 /* =========================
    ACTIONS
 ========================= */
-function findNoneIndexForGender(gender, key){
-  const list = assetsByGender[gender][key] || [];
-  for (let i=0;i<list.length;i++){
-    if (list[i]?.none) return i;
-  }
-  return 0;
-}
+function findNoneIndexForGender2(gender, key){ return findNoneIndexForGender(gender, key); }
 function findNoneIndex(key){ return findNoneIndexForGender(activeGender, key); }
 
+function enforceMiscLock(){
+  setMiscItemFromBody(activeGender, STATE());
+  setReadout(MISC_ITEM_KEY);
+}
+
 function step(key, dir) {
-  const list = ASSETS()[key] || [];
+  if (key === MISC_ITEM_KEY && !isMiscUnlocked(activeGender)) return;
+
+  const list = getListFor(activeGender, key);
   if (list.length === 0) return;
 
   let idx = STATE()[key] ?? 0;
@@ -1192,105 +1770,58 @@ function step(key, dir) {
   STATE()[key] = idx;
 
   setReadout(key);
+
+  if (key === "body"){
+    enforceMiscLock();
+    buildControls();
+  }
+
   saveState();
   render();
-
-  if (key === "background") return;
-
   updatePersonalityUI();
   regenerateFamilyCache();
   drawFamily();
 }
 
-function selectedFilenameFor(gender, key){
-  const list = assetsByGender[gender][key] || [];
-  const idx = stateByGender[gender][key] ?? 0;
-  const src = list[idx]?.src || "";
-  return src.split("/").pop() || "";
-}
-function selectedFilename(key){ return selectedFilenameFor(activeGender, key); }
-
-/* =========================================================
-   Fresh-roll blonde harmonizer (male facial hair)
-========================================================= */
-function indicesByFileSet(gender, key, fileSet){
-  const list = assetsByGender[gender][key] || [];
-  const hits = [];
-  for (let i=0;i<list.length;i++){
-    const fn = (list[i]?.src || "").split("/").pop() || "";
-    if (fileSet.has(fn)) hits.push(i);
-  }
-  return hits;
-}
-function indicesNotInFileSet(gender, key, fileSet){
-  const list = assetsByGender[gender][key] || [];
-  const hits = [];
-  for (let i=0;i<list.length;i++){
-    const fn = (list[i]?.src || "").split("/").pop() || "";
-    if (!fileSet.has(fn) && !list[i]?.none) hits.push(i);
-  }
-  return hits;
-}
-function pickFrom(arr){
-  if (!arr || !arr.length) return null;
-  return arr[Math.floor(Math.random()*arr.length)];
-}
-function harmonizeFacialHairFreshRoll(){
-  if (activeGender !== "male") return;
-
-  const stacheList = assetsByGender.male.stache || [];
-  const beardList  = assetsByGender.male.beards || [];
-  if (!stacheList.length || !beardList.length) return;
-
-  const stNone = stacheList[stateByGender.male.stache ?? 0]?.none;
-  const bdNone = beardList[stateByGender.male.beards ?? 0]?.none;
-  if (stNone || bdNone) return;
-
-  const blondeSt = indicesByFileSet("male","stache", BLONDE_STACHE_FILES);
-  const blondeBd = indicesByFileSet("male","beards", BLONDE_BEARD_FILES);
-  const nonSt    = indicesNotInFileSet("male","stache", BLONDE_STACHE_FILES);
-  const nonBd    = indicesNotInFileSet("male","beards", BLONDE_BEARD_FILES);
-
-  if (!blondeSt.length || !blondeBd.length || !nonSt.length || !nonBd.length) return;
-
-  const wantBlonde = (Math.random() < 0.22);
-
-  if (wantBlonde){
-    stateByGender.male.stache = pickFrom(blondeSt);
-    stateByGender.male.beards = pickFrom(blondeBd);
-  } else {
-    stateByGender.male.stache = pickFrom(nonSt);
-    stateByGender.male.beards = pickFrom(nonBd);
-  }
-
-  setReadout("stache");
-  setReadout("beards");
-}
-
-function randomizePartsForActiveGender() {
-  for (const cat of CATS()) {
-    const list = ASSETS()[cat.key] || [];
-    if (!list.length) continue;
-
-    if (activeGender === "male" && cat.key === "hat") {
-      if (Math.random() > HAT_SHOW_CHANCE_ON_ROLL) STATE().hat = findNoneIndex("hat");
-      else STATE().hat = Math.floor(Math.random() * list.length);
-      setReadout(cat.key);
-      continue;
-    }
-
-    STATE()[cat.key] = Math.floor(Math.random() * list.length);
-    setReadout(cat.key);
-  }
-
-  harmonizeFacialHairFreshRoll();
-}
-
 function ensureSurnameForGender(g){
   const cur = String(bioByGender[g].name || "").trim();
   if (cur.includes(" ")) return;
-  const full = randomNameByGender(g);
-  bioByGender[g].name = full;
+  bioByGender[g].name = randomNameByGender(g);
+}
+
+function randomizePartsForActiveGender() {
+  chooseSkinColorForGender(activeGender);
+  chooseHairColorForGender(activeGender);
+
+  for (const cat of CATS()) {
+    const key = cat.key;
+
+    if (activeGender === "male" && key === "hat") {
+      const listHat = getListFor(activeGender, "hat");
+      if (!listHat.length) continue;
+      if (Math.random() > HAT_SHOW_CHANCE_ON_ROLL) STATE().hat = findNoneIndex("hat");
+      else STATE().hat = Math.floor(Math.random() * listHat.length);
+      setReadout("hat");
+      continue;
+    }
+
+    if (key === MISC_ITEM_KEY) continue;
+
+    const list = getListFor(activeGender, key);
+    if (!list.length){
+      const fallback = getListAnyColor(activeGender, key);
+      if (!fallback.length) continue;
+      STATE()[key] = Math.floor(Math.random() * fallback.length);
+      setReadout(key);
+      continue;
+    }
+
+    STATE()[key] = Math.floor(Math.random() * list.length);
+    setReadout(key);
+  }
+
+  enforceMiscLock();
+  buildControls();
 }
 
 function randomizeAll() {
@@ -1315,6 +1846,8 @@ function resetAll() {
     STATE()[cat.key] = 0;
     setReadout(cat.key);
   }
+  enforceMiscLock();
+  buildControls();
   saveState();
   render();
   updatePersonalityUI();
@@ -1326,24 +1859,31 @@ function resetAll() {
    SPIN
 ========================= */
 let spinning = false;
-
 function spinAll(){
   if (spinning) return;
   spinning = true;
 
-  for (const cat of CATS()) {
-    const list = ASSETS()[cat.key] || [];
-    if (!list.length) continue;
+  chooseSkinColorForGender(activeGender);
+  chooseHairColorForGender(activeGender);
 
-    if (activeGender === "male" && cat.key === "hat") {
+  for (const cat of CATS()) {
+    const key = cat.key;
+
+    if (activeGender === "male" && key === "hat") {
+      const listHat = getListFor(activeGender, "hat");
+      if (!listHat.length) continue;
       if (Math.random() > HAT_SHOW_CHANCE_ON_ROLL) STATE().hat = findNoneIndex("hat");
-      else STATE().hat = Math.floor(Math.random() * list.length);
-      setReadout(cat.key);
+      else STATE().hat = Math.floor(Math.random() * listHat.length);
+      setReadout("hat");
       continue;
     }
 
-    STATE()[cat.key] = Math.floor(Math.random() * list.length);
-    setReadout(cat.key);
+    if (key === MISC_ITEM_KEY) continue;
+
+    const list = getListFor(activeGender, key);
+    if (!list.length) continue;
+    STATE()[key] = Math.floor(Math.random() * list.length);
+    setReadout(key);
   }
 
   const start = performance.now();
@@ -1351,12 +1891,15 @@ function spinAll(){
   const perCat = new Map();
 
   for (const cat of CATS()) {
-    const list = ASSETS()[cat.key] || [];
+    const key = cat.key;
+    if (key === MISC_ITEM_KEY) continue;
+
+    const list = getListFor(activeGender, key);
     if (!list.length) continue;
 
     const dur = totalDur * (0.75 + Math.random()*0.45);
     const stepMs0 = 55 + Math.random()*45;
-    perCat.set(cat.key, { dur, stepMs0, lastTick: start, stopped:false });
+    perCat.set(key, { dur, stepMs0, lastTick: start, stopped:false });
   }
 
   function tick(now){
@@ -1366,7 +1909,7 @@ function spinAll(){
     for (const [key, info] of perCat.entries()){
       if (info.stopped) continue;
 
-      const list = ASSETS()[key] || [];
+      const list = getListFor(activeGender, key);
       if (!list.length) { info.stopped = true; continue; }
 
       if (t >= info.dur){
@@ -1397,6 +1940,11 @@ function spinAll(){
         if (idx >= list.length) idx = 0;
         STATE()[key] = idx;
         setReadout(key);
+
+        if (key === "body"){
+          enforceMiscLock();
+          buildControls();
+        }
       }
     }
 
@@ -1408,7 +1956,8 @@ function spinAll(){
     } else {
       spinning = false;
 
-      harmonizeFacialHairFreshRoll();
+      enforceMiscLock();
+      buildControls();
 
       ensureSurnameForGender(activeGender);
       const surname = (String(bioByGender[activeGender].name || "").split(" ")[1] || randomSurname()).trim();
@@ -1439,19 +1988,67 @@ function drawBackground(img, targetCtx, targetCanvas){
   const y = (ch - h)/2;
   targetCtx.drawImage(img, x, y, w, h);
 }
-function drawDwarfLayer(img, targetCtx, targetCanvas){
+
+function layerMotionForKey(key){
+  const t  = idleTime;
+  const t2 = idleTime * 1.35 + 1.2;
+
+  const breathe = Math.sin(t) * BODY_BREATHE_SCALE;
+
+  let dx = 0, dy = 0, sx = 1, sy = 1;
+
+  if (key === "body"){
+    sy = 1 + breathe;
+    dy = Math.sin(t + 0.5) * BODY_BOB_Y;
+    return {dx, dy, sx, sy};
+  }
+
+  const headBob  = Math.sin(t + 1.7) * HEAD_BOB_Y;
+  const headSway = Math.sin(t * 0.7 + 0.9) * HEAD_SWAY_X;
+
+  const headTight = new Set(["head","hair_back","backhair","hat"]);
+  const headDrag  = new Set(["beards","stache","brows","hair"]);
+  const faceMicro = new Set(["eyes","nose","mouth"]);
+
+  if (headTight.has(key)){
+    dx = headSway;
+    dy = headBob;
+    return {dx, dy, sx, sy};
+  }
+
+  if (headDrag.has(key)){
+    const targetX = headSway;
+    const targetY = headBob;
+
+    drag.x += (targetX - drag.x) * (1 - DRAG_STRENGTH);
+    drag.y += (targetY - drag.y) * (1 - DRAG_STRENGTH);
+
+    dx = drag.x * 1.05 + Math.sin(t2) * 0.35;
+    dy = drag.y * 1.05 + Math.sin(t2 + 1.6) * 0.55;
+    return {dx, dy, sx, sy};
+  }
+
+  if (faceMicro.has(key)){
+    dx = headSway + Math.sin(t2 + 2.1) * FACE_MICRO_X;
+    dy = headBob  + Math.sin(t2 + 0.4) * FACE_MICRO_Y;
+    return {dx, dy, sx, sy};
+  }
+
+  sy = 1 + breathe * 0.35;
+  return {dx, dy, sx, sy};
+}
+
+function drawDwarfLayerKeyed(key, img, targetCtx, targetCanvas){
   const baseW = targetCanvas.width;
   const baseH = targetCanvas.height;
 
-  const breathe = idleEnabled ? (Math.sin(idleTime) * IDLE_AMOUNT) : 0;
-  const scaleY = 1 + breathe;
+  const m = idleEnabled ? layerMotionForKey(key) : {dx:0,dy:0,sx:1,sy:1};
 
-  const w = baseW * FIT_SCALE;
-  const h = baseH * BODY_STRETCH_Y * FIT_SCALE * scaleY;
+  const w = baseW * FIT_SCALE * (m.sx || 1);
+  const h = baseH * BODY_STRETCH_Y * FIT_SCALE * (m.sy || 1);
 
-  const x = (baseW - w) / 2;
-  const bounce = idleEnabled ? (Math.sin(idleTime) * IDLE_BOUNCE) : 0;
-  const y = baseH - h + bounce + PREVIEW_DROP_PX;
+  const x = (baseW - w) / 2 + (m.dx || 0);
+  const y = baseH - h + PREVIEW_DROP_PX + (m.dy || 0);
 
   targetCtx.drawImage(img, x, y, w, h);
 }
@@ -1460,18 +2057,27 @@ function renderToCanvas(gender, targetCtx, targetCanvas, overrideState=null, ove
   targetCtx.clearRect(0,0,targetCanvas.width,targetCanvas.height);
 
   const layers = overrideLayerOrder || GENDERS[gender].layerOrder;
-  const as = assetsByGender[gender];
-  const st = overrideState || stateByGender[gender];
+  const st = overrideState || STATE(gender);
+
+  const blinking = isBlinking(gender);
+  const closedIdx = blinkByGender[gender].closedIdx;
+
+  const miscUnlockedForState = isMiscBodySelectedForState(gender, st);
 
   for (const key of layers){
-    const list = as[key] || [];
+    if (key === MISC_ITEM_KEY && !miscUnlockedForState) continue;
+
+    const list = getListFor(gender, key);
     if (!list.length) continue;
 
-    const img = list[st[key] ?? 0]?.img;
+    let useIdx = st[key] ?? 0;
+    if (key === "eyes" && blinking && closedIdx >= 0) useIdx = closedIdx;
+
+    const img = list[useIdx]?.img;
     if (!img) continue;
 
     if (key === "background") drawBackground(img, targetCtx, targetCanvas);
-    else drawDwarfLayer(img, targetCtx, targetCanvas);
+    else drawDwarfLayerKeyed(key, img, targetCtx, targetCanvas);
   }
 }
 
@@ -1496,6 +2102,7 @@ function exportPNG() {
 
   idleEnabled = false;
   idleTime = 0;
+  drag.x = 0; drag.y = 0;
   render();
 
   const seed = getSeed();
@@ -1517,11 +2124,187 @@ function exportPNG() {
 }
 
 /* =========================
-   PERSONALITY / RPG UI
+   RPG / PERSONALITY
 ========================= */
+function estimateBodyStatsFallback(bodyFile){
+  const num = parseInt((bodyFile || "").replace(".png",""), 10);
+  if (!Number.isFinite(num)) return { physique:1 };
+  if (num <= 2) return { physique:1, social:1 };
+  if (num <= 4) return { physique:2, grit:1 };
+  if (num <= 6) return { physique:3, grit:2, martial:1 };
+  return { physique:4, grit:2, martial:1 };
+}
+function estimateHatStatsFallback(hatFile){
+  const num = parseInt((hatFile || "").replace(".png",""), 10);
+  if (!Number.isFinite(num)) return { luck:1 };
+  if (num % 3 === 0) return { grit:1, martial:1 };
+  if (num % 3 === 1) return { social:1, luck:1 };
+  return { scholar:1, arcana:1 };
+}
+
+function sampleLikes(stats, n){
+  const bias = [];
+  if ((stats.scholar||0) > (stats.martial||0)) bias.push("quiet libraries","carved runes","mapmaking","strange artifacts","fresh parchment","ink stains");
+  if ((stats.martial||0) >= (stats.scholar||0)) bias.push("forges at dawn","polished stone","legendary items","battle drills","weapon racks");
+  if ((stats.social||0) >= 3) bias.push("songs by the fire","warm pints","singing","choirs","market gossip","dramatic entrances");
+  if ((stats.grit||0) >= 3) bias.push("underground rivers","cave moss","ancient tombs","dust","dangerous tunnels","mystery doors");
+  if ((stats.craft||0) >= 3) bias.push("fresh anvils","well-made boots","tool belts","guild stamps","trap mechanisms");
+  if ((stats.arcana||0) >= 3) bias.push("minor hexes","lucky charms","candlelight rituals","glowing fungi","sacred texts");
+  if ((stats.luck||0) >= 3) bias.push("coin stacks","weird hats","bad ideas","storms");
+  const mixed = uniq([...bias, ...LIKES_POOL]);
+  return sampleFromPool(mixed, n);
+}
+function sampleDislikes(stats, n){
+  const bias = [];
+  if ((stats.scholar||0) >= 4) bias.push("crowds","long speeches","messy beds","dishes","paper cuts");
+  if ((stats.martial||0) >= 4) bias.push("wasted metal","blunted weapons","splintered shields","rust","weak hinges");
+  if ((stats.social||0) <= 1) bias.push("crowds","being asked to smile");
+  if ((stats.grit||0) >= 4) bias.push("bright noon light","surface rain","dampness","wet socks");
+  if ((stats.arcana||0) >= 3) bias.push("wind","mushrooms that look at you funny");
+  if ((stats.luck||0) >= 4) bias.push("instructions","unlabeled levers");
+  const mixed = uniq([...bias, ...DISLIKES_POOL]);
+  return sampleFromPool(mixed, n);
+}
+function sampleQuirks(stats, n){
+  const bias = [];
+  if ((stats.scholar||0) >= 4) bias.push("savant","writes bad poetry at night","starts fights over grammar","makes lists");
+  if ((stats.martial||0) >= 4) bias.push("warmonger","master war-planner","hums battle songs while cooking","wins arguments by shouting ‘TRADITION!’");
+  if ((stats.social||0) >= 4) bias.push("mutters to self","hoards buttons","barters for lint","collects gossip like gems");
+  if ((stats.grit||0) >= 4) bias.push("never bathes","refuses to eat soup","sleeps in boots","holds grudges against clouds");
+  if ((stats.craft||0) >= 4) bias.push("names every pickaxe","refuses to throw away broken tools","writes love letters to the forge");
+  if ((stats.arcana||0) >= 4) bias.push("thinks statues are listening","talks to magma like it’s a friend","believes mushrooms are government spies");
+  if ((stats.luck||0) >= 4) bias.push("claims to have met a dragon (probably lied)","can’t stop gambling with beetles","refuses to step on cracks");
+  const mixed = uniq([...bias, ...QUIRKS_POOL]);
+  return sampleFromPool(mixed, n);
+}
+
+function makeProfileLine(stats, reads, quirks){
+  const top = maxKey(stats);
+  const vibe =
+    (top==="martial") ? "battle-minded" :
+    (top==="physique") ? "built-like-a-keep" :
+    (top==="grit") ? "unyielding" :
+    (top==="craft") ? "hand-forged" :
+    (top==="scholar") ? "bookish" :
+    (top==="arcana") ? "cursed-bright" :
+    (top==="social") ? "gregarious" : "fate-touched";
+
+  const q = quirks.length ? quirks.join(", ") : "none";
+  return `${vibe} dwarf. Reads as: ${reads}. Quirks: ${q}.`;
+}
+
+/* ✅ INVENTORY GENERATOR */
+function deriveFears(stats, dislikes, quirks){
+  const fears = [];
+  const d = (dislikes || []).map(x=>String(x).toLowerCase());
+  const q = (quirks || []).map(x=>String(x).toLowerCase());
+
+  if (d.some(x=>x.includes("crowd"))) fears.push("crowds");
+  if (d.some(x=>x.includes("spider"))) fears.push("spiders");
+  if (d.some(x=>x.includes("snake"))) fears.push("snakes");
+  if (d.some(x=>x.includes("bright"))) fears.push("bright noon light");
+  if (d.some(x=>x.includes("wind"))) fears.push("wind");
+  if (q.some(x=>x.includes("afraid of the dark"))) fears.push("the dark");
+  if (q.some(x=>x.includes("mortified of snakes"))) fears.push("snakes");
+  if (q.some(x=>x.includes("fears open doors"))) fears.push("open doors");
+
+  if ((stats.luck||0) >= 4) fears.push("instructions");
+  if ((stats.arcana||0) >= 4) fears.push("cursed artifacts");
+  if ((stats.grit||0) >= 4) fears.push("surface rain");
+
+  return uniq(fears).slice(0, 4);
+}
+
+function normalizeTag(s){
+  return String(s||"").toLowerCase().replace(/[^\w\s-]/g,"").trim();
+}
+
+function buildInventory(stats, role, likes, dislikes, traits, quirks){
+  const inv = [];
+
+  const fears = deriveFears(stats, dislikes, quirks);
+
+  inv.push("iron rations (3 days)");
+  inv.push("waterskin");
+  inv.push("lamp + tallow (low)");
+  inv.push("bedroll");
+  inv.push("50ft rope (quality)");
+
+  const roleL = normalizeTag(role);
+  if (roleL.includes("anatomist")) {
+    inv.push("bone saw (folding)");
+    inv.push("specimen jars (3)");
+    inv.push("field notes + charcoal");
+  } else if (roleL.includes("runesmith") || roleL.includes("totemwright")) {
+    inv.push("rune chisel set");
+    inv.push("powdered chalk + sigil string");
+    inv.push("small anvil charm");
+  } else if (roleL.includes("hex") || roleL.includes("omen") || roleL.includes("rune-seer")) {
+    inv.push("warding talisman");
+    inv.push("salt pouch");
+    inv.push("candle stubs (7)");
+  } else if (roleL.includes("trader") || roleL.includes("envoy") || roleL.includes("broker") || roleL.includes("celebrity")) {
+    inv.push("coin purse (clinking)");
+    inv.push("trade ledger");
+    inv.push("seal wax + stamp");
+  } else if (roleL.includes("smith") || roleL.includes("foundry") || roleL.includes("deepwright") || roleL.includes("artisan")) {
+    inv.push("tool roll (tongs, punch, file)");
+    inv.push("spare rivets");
+    inv.push("leather apron");
+  } else if (roleL.includes("vanguard") || roleL.includes("soldier") || roleL.includes("pit fighter") || roleL.includes("raider")) {
+    inv.push("whetstone");
+    inv.push("bandage wrap");
+    inv.push("spare throwing knife");
+  } else {
+    inv.push("handaxe (utility)");
+  }
+
+  if ((stats.martial||0) >= 4) inv.push(`primary weapon: ${rand(MARTIAL_WEAPONS)}`);
+  if ((stats.physique||0) >= 4) inv.push("heavy pack frame");
+  if ((stats.grit||0) >= 4) inv.push("stout climbing spikes");
+  if ((stats.craft||0) >= 4) inv.push("lock picks (dwarven)");
+  if ((stats.scholar||0) >= 4) inv.push("field atlas + pencils");
+  if ((stats.arcana||0) >= 4) inv.push("black-slate grimoire");
+  if ((stats.social||0) >= 4) inv.push("spare gift: polished stone idol");
+  if ((stats.luck||0) >= 4) inv.push("lucky charm (questionable)");
+
+  const likeL = (likes||[]).map(normalizeTag);
+  if (likeL.some(x=>x.includes("mushroom"))) inv.push("mushroom jerky");
+  if (likeL.some(x=>x.includes("map"))) inv.push("rolled tunnel map");
+  if (likeL.some(x=>x.includes("coins"))) inv.push("coin stack (for flipping)");
+  if (likeL.some(x=>x.includes("battle") || x.includes("weapon"))) inv.push("mini banner patch");
+  if (likeL.some(x=>x.includes("library") || x.includes("texts"))) inv.push("pocket book of oaths");
+  if (likeL.some(x=>x.includes("gems"))) inv.push("gem pouch (empty… for now)");
+  if (likeL.some(x=>x.includes("fishing"))) inv.push("hook + line");
+  if (likeL.some(x=>x.includes("glowing fungi"))) inv.push("glow spore vial");
+
+  const fearL = fears.map(normalizeTag);
+  if (fearL.includes("crowds")) inv.push("hooded cloak (anti-people)");
+  if (fearL.includes("spiders")) inv.push("sticky resin (spider hate)");
+  if (fearL.includes("snakes")) inv.push("snake tongs");
+  if (fearL.includes("the dark")) inv.push("extra lamp oil");
+  if (fearL.includes("open doors")) inv.push("door wedge (never trust hinges)");
+  if (fearL.includes("bright noon light")) inv.push("soot goggles");
+  if (fearL.includes("wind")) inv.push("weighted cloak pins");
+
+  const t = (traits||[]).map(normalizeTag).join(" ");
+  const q = (quirks||[]).map(normalizeTag).join(" ");
+
+  if (t.includes("tactical") || t.includes("disciplined")) inv.push("chalk (for markings)");
+  if (t.includes("merchant") || t.includes("hustler")) inv.push("tiny scale");
+  if (t.includes("bookish") || t.includes("attentive")) inv.push("ink + quill");
+  if (q.includes("won't sleep without a helmet")) inv.push("backup helmet (yes)");
+  if (q.includes("counts gemstones")) inv.push("pocket abacus");
+  if (q.includes("talks to magma")) inv.push("heat-stone (souvenir)");
+
+  return uniq(inv).slice(0, 12);
+}
+
 function computeRPG(){
   const stats = statZero();
   const traits = [];
+  const extraLikes = [];
+  const extraDislikes = [];
 
   const picks = {
     eyes: selectedFilename("eyes"),
@@ -1530,7 +2313,6 @@ function computeRPG(){
     nose: selectedFilename("nose"),
     hair: selectedFilename("hair"),
   };
-
   for (const [cat, file] of Object.entries(picks)){
     const rule = PART_RULES[cat]?.[file];
     if (!rule) continue;
@@ -1538,15 +2320,49 @@ function computeRPG(){
     if (rule.traits) traits.push(...rule.traits);
   }
 
-  const likes = sampleLikes(stats, 4);
-  const dislikes = sampleDislikes(stats, 4);
-  const quirks = sampleQuirks(stats, 3);
+  const bodyFile = selectedFilename("body");
+  const bodyRule = BODY_RULES[bodyFile];
+  const bodyStats = bodyRule?.stats || estimateBodyStatsFallback(bodyFile);
+  addStats(stats, bodyStats);
+  if (bodyRule?.traits) traits.push(...bodyRule.traits);
+  if (bodyRule?.likes) extraLikes.push(...bodyRule.likes);
+  if (bodyRule?.dislikes) extraDislikes.push(...bodyRule.dislikes);
 
-  const role = chooseRole(stats);
-  const reads = traits.slice(0,5).join(", ") || "unreadable";
+  let hatFile = "";
+  if (activeGender === "male") hatFile = selectedFilename("hat");
+  if (hatFile && hatFile !== NONE_FILENAME){
+    const hatRule = HAT_RULES[hatFile];
+    const hatStats = hatRule?.stats || estimateHatStatsFallback(hatFile);
+    addStats(stats, hatStats);
+    if (hatRule?.traits) traits.push(...hatRule.traits);
+    if (hatRule?.likes) extraLikes.push(...hatRule.likes);
+    if (hatRule?.dislikes) extraDislikes.push(...hatRule.dislikes);
+
+    if (Math.random() < 0.22) traits.push("helmeted");
+    if (Math.random() < 0.18) stats.luck += 1;
+  }
+
+  if (Math.random() < 0.18) stats.luck += 1;
+  if (Math.random() < 0.12) stats.arcana += 1;
+  if (Math.random() < 0.10) stats.craft += 1;
+  if (Math.random() < 0.10) stats.social += 1;
+
+  normalizeStats(stats);
+
+  const likes = uniq([...extraLikes, ...sampleLikes(stats, 5)]).slice(0,5);
+  const dislikes = uniq([...extraDislikes, ...sampleDislikes(stats, 5)]).slice(0,5);
+  const quirks = sampleQuirks(stats, 4);
+
+  let role = chooseHybridRole(stats);
+  role = applyHatTitlePrefix(role, hatFile);
+
+  const reads = uniq(traits).slice(0,7).join(", ") || "unreadable";
   const blurb = makeProfileLine(stats, reads, quirks);
 
-  return { stats, traits: uniq(traits).slice(0,8), likes, dislikes, quirks, role, blurb };
+  const inventory = buildInventory(stats, role, likes, dislikes, uniq(traits), quirks);
+  const fears = deriveFears(stats, dislikes, quirks);
+
+  return { stats, traits: uniq(traits).slice(0,12), likes, dislikes, quirks, role, blurb, inventory, fears };
 }
 
 function renderList(ul, items){
@@ -1568,7 +2384,7 @@ function updatePersonalityUI(){
 
   const pills = $("traitPills");
   pills.innerHTML = "";
-  for (const t of data.traits.slice(0,6)) {
+  for (const t of data.traits.slice(0,7)) {
     const span = document.createElement("span");
     span.className = "pill";
     span.textContent = t;
@@ -1583,62 +2399,60 @@ function updatePersonalityUI(){
 
   $("personalityBlurb").textContent = data.blurb || "…";
   $("roleOut").textContent = data.role || "…";
-  $("rpgLine").textContent = `martial (${data.stats.martial}) / scholar (${data.stats.scholar}) / social (${data.stats.social}) / grit (${data.stats.grit})`;
+
+  $("rpgLine").textContent =
+    `martial (${data.stats.martial}) / physique (${data.stats.physique}) / grit (${data.stats.grit}) / craft (${data.stats.craft}) / ` +
+    `scholar (${data.stats.scholar}) / arcana (${data.stats.arcana}) / social (${data.stats.social}) / luck (${data.stats.luck})`;
 
   renderList($("likesList"), data.likes);
   renderList($("dislikesList"), data.dislikes);
 
-  drawRadar(data.stats);
+  const fearsText = (data.fears && data.fears.length) ? ` | fears: ${data.fears.join(", ")}` : "";
+  $("invMeta").textContent = `generated from role + likes/dislikes + quirks${fearsText}`;
+  renderList($("invList"), data.inventory);
+
+  drawRadar8(data.stats);
 }
 
 /* =========================
-   RADAR DRAW
+   8-AXIS RADAR
 ========================= */
-function drawRadar(stats){
+function drawRadar8(stats){
   const W = rpgCanvas.width, H = rpgCanvas.height;
   rpgCtx.clearRect(0,0,W,H);
 
   rpgCtx.fillStyle = "#d0d0d0";
   rpgCtx.fillRect(0,0,W,H);
 
-  const cx = W/2, cy = H/2 + 10;
-  const R = Math.min(W,H) * 0.28;
+  const cx = W/2, cy = H/2 + 12;
+  const R = Math.min(W,H) * 0.30;
 
-  const labels = [
-    {k:"martial", x:cx, y:cy - R - 10, align:"center"},
-    {k:"social",  x:cx + R + 14, y:cy + 4, align:"left"},
-    {k:"grit",    x:cx, y:cy + R + 16, align:"center"},
-    {k:"scholar", x:cx - R - 14, y:cy + 4, align:"right"},
-  ];
+  let maxV = 6;
+  for (const k of STATS_KEYS) maxV = Math.max(maxV, stats[k]||0);
 
-  const maxV = Math.max(4, stats.martial, stats.social, stats.grit, stats.scholar, 6);
-
-  rpgCtx.strokeStyle = "rgba(0,0,0,0.20)";
+  rpgCtx.strokeStyle = "rgba(0,0,0,0.18)";
   rpgCtx.lineWidth = 1;
   for (let i=1;i<=5;i++){
     const rr = R * (i/5);
-    drawDiamond(rr);
+    drawPoly(rr);
   }
 
-  rpgCtx.strokeStyle = "rgba(0,0,0,0.22)";
+  rpgCtx.strokeStyle = "rgba(0,0,0,0.20)";
   rpgCtx.beginPath();
-  rpgCtx.moveTo(cx, cy-R);
-  rpgCtx.lineTo(cx, cy+R);
-  rpgCtx.moveTo(cx-R, cy);
-  rpgCtx.lineTo(cx+R, cy);
+  for (let i=0;i<8;i++){
+    const a = (-Math.PI/2) + i*(Math.PI/4);
+    rpgCtx.moveTo(cx,cy);
+    rpgCtx.lineTo(cx + Math.cos(a)*R, cy + Math.sin(a)*R);
+  }
   rpgCtx.stroke();
 
-  const pM = clamp(stats.martial/maxV, 0, 1);
-  const pS = clamp(stats.social/maxV, 0, 1);
-  const pG = clamp(stats.grit/maxV, 0, 1);
-  const pC = clamp(stats.scholar/maxV, 0, 1);
-
-  const pts = [
-    {x: cx,         y: cy - R*pM},
-    {x: cx + R*pS,  y: cy},
-    {x: cx,         y: cy + R*pG},
-    {x: cx - R*pC,  y: cy},
-  ];
+  const pts = [];
+  for (let i=0;i<8;i++){
+    const key = STATS_KEYS[i];
+    const p = clamp((stats[key]||0)/maxV, 0, 1);
+    const a = (-Math.PI/2) + i*(Math.PI/4);
+    pts.push({ x: cx + Math.cos(a)*R*p, y: cy + Math.sin(a)*R*p });
+  }
 
   rpgCtx.fillStyle = "rgba(220, 40, 40, 0.28)";
   rpgCtx.strokeStyle = "rgba(140, 10, 10, 0.78)";
@@ -1654,7 +2468,7 @@ function drawRadar(stats){
   rpgCtx.fillStyle = "rgba(0,0,0,0.7)";
   for (const p of pts){
     rpgCtx.beginPath();
-    rpgCtx.arc(p.x, p.y, 3.2, 0, Math.PI*2);
+    rpgCtx.arc(p.x, p.y, 3.0, 0, Math.PI*2);
     rpgCtx.fill();
   }
 
@@ -1664,36 +2478,45 @@ function drawRadar(stats){
   rpgCtx.fillText("RPG STATS", 10, 16);
 
   rpgCtx.font = "10px ui-monospace, Menlo, Consolas, monospace";
-  for (const L of labels){
-    const val = stats[L.k] || 0;
-    rpgCtx.textAlign = L.align;
-    const name = L.k.toUpperCase();
-    rpgCtx.fillText(`${name} (${val})`, L.x, L.y);
+  for (let i=0;i<8;i++){
+    const key = STATS_KEYS[i];
+    const val = stats[key] || 0;
+    const a = (-Math.PI/2) + i*(Math.PI/4);
+    const lx = cx + Math.cos(a)*(R + 16);
+    const ly = cy + Math.sin(a)*(R + 16);
+
+    let align = "center";
+    if (Math.cos(a) > 0.35) align = "left";
+    if (Math.cos(a) < -0.35) align = "right";
+
+    rpgCtx.textAlign = align;
+    rpgCtx.fillText(`${STAT_LABELS[key]} (${val})`, lx, ly);
   }
 
-  function drawDiamond(rr){
+  function drawPoly(rr){
     rpgCtx.beginPath();
-    rpgCtx.moveTo(cx, cy-rr);
-    rpgCtx.lineTo(cx+rr, cy);
-    rpgCtx.lineTo(cx, cy+rr);
-    rpgCtx.lineTo(cx-rr, cy);
+    for (let i=0;i<8;i++){
+      const a = (-Math.PI/2) + i*(Math.PI/4);
+      const x = cx + Math.cos(a)*rr;
+      const y = cy + Math.sin(a)*rr;
+      if (i===0) rpgCtx.moveTo(x,y);
+      else rpgCtx.lineTo(x,y);
+    }
     rpgCtx.closePath();
     rpgCtx.stroke();
   }
 }
 
 /* =========================
-   CREST GENERATOR
+   CREST
 ========================= */
 function randIndex(n){ return n <= 0 ? 0 : Math.floor(Math.random()*n); }
-
 function rollCrest(){
   for (const p of CREST_PARTS){
     const list = crestAssets[p.key] || [];
     crestState[p.key] = randIndex(list.length);
   }
 }
-
 function drawCrest(){
   const W = crestCanvas.width, H = crestCanvas.height;
   crestCtx.clearRect(0,0,W,H);
@@ -1708,7 +2531,6 @@ function drawCrest(){
     if (!list.length) continue;
     const img = list[crestState[key] ?? 0]?.img;
     if (!img) continue;
-
     crestCtx.drawImage(img, 0, 0, W, H);
   }
 
@@ -1720,9 +2542,8 @@ function drawCrest(){
 /* =========================
    FAMILY TREE
 ========================= */
-const MALE_HEAD_LAYER_ORDER = ["hair_back","head","beards","mouth","stache","nose","eyes","brows","hair","hat"];
-const FEMALE_HEAD_LAYER_ORDER = ["backhair","head","mouth","nose","eyes","hair"];
-
+const MALE_HEAD_LAYER_ORDER = ["hair_back","head","beards","mouth","stache","nose","eyes","brows","hair","hat", MISC_ITEM_KEY];
+const FEMALE_HEAD_LAYER_ORDER = ["backhair","head","mouth","nose","eyes","hair", MISC_ITEM_KEY];
 const HEAD_CROP = { x: 0.25, y: 0.04, w: 0.50, h: 0.54 };
 
 const headTemp = document.createElement("canvas");
@@ -1736,8 +2557,8 @@ function cloneState(obj){ return JSON.parse(JSON.stringify(obj || {})); }
 function modIdx(i, n){ return ((i % n) + n) % n; }
 
 function mapIndexByFilename(fromGender, toGender, key, fromIdx){
-  const fromList = assetsByGender[fromGender][key] || [];
-  const toList = assetsByGender[toGender][key] || [];
+  const fromList = getListFor(fromGender, key);
+  const toList = getListFor(toGender, key);
   if (!fromList.length || !toList.length) return 0;
 
   const src = fromList[fromIdx]?.src || "";
@@ -1751,14 +2572,14 @@ function mapIndexByFilename(fromGender, toGender, key, fromIdx){
 }
 
 function makeChildState(childGender){
-  const stM = stateByGender.male;
-  const stF = stateByGender.female;
+  const stM = STATE("male");
+  const stF = STATE("female");
 
   const child = {};
   const keysMale = GENDERS.male.categories.map(c=>c.key);
   const keysFem  = GENDERS.female.categories.map(c=>c.key);
 
-  const geneKeys = ["head","eyes","mouth","nose","hair","brows","hair_back","beards","stache","backhair","hat"];
+  const geneKeys = ["head","eyes","mouth","nose","hair","brows","hair_back","beards","stache","backhair","hat","body"];
 
   for (const key of geneKeys){
     const takeFrom = (Math.random() < 0.5) ? "male" : "female";
@@ -1786,7 +2607,7 @@ function makeChildState(childGender){
     if (!childKeys.includes(key)) continue;
 
     if (fromGender === childGender){
-      const list = assetsByGender[childGender][key] || [];
+      const list = getListFor(childGender, key);
       if (!list.length) continue;
       child[key] = modIdx(fromIdx, list.length);
     } else {
@@ -1795,25 +2616,26 @@ function makeChildState(childGender){
   }
 
   if (childGender === "male"){
-    if ("hat" in child && (assetsByGender.male.hat || []).length){
-      child.hat = findNoneIndexForGender("male","hat");
+    if ((getListFor("male","hat") || []).length){
+      child.hat = findNoneIndexForGender2("male","hat");
     }
   }
 
   const mutKeys = (childGender === "male")
-    ? ["eyes","mouth","brows","nose","hair","beards","stache","head","hair_back"]
-    : ["eyes","mouth","nose","hair","head","backhair"];
+    ? ["eyes","mouth","brows","nose","hair","beards","stache","head","hair_back","body"]
+    : ["eyes","mouth","nose","hair","head","backhair","body"];
 
   const mutCount = (Math.random()<0.60) ? 1 : 2;
   const mk = mutKeys.slice().sort(()=>Math.random()-0.5).slice(0, mutCount);
   for (const k of mk){
-    const list = assetsByGender[childGender][k] || [];
+    const list = getListFor(childGender, k);
     if (!list.length) continue;
     const amt = 1 + Math.floor(Math.random()*2);
     const dir = (Math.random()<0.5) ? -1 : 1;
     child[k] = modIdx((child[k] ?? 0) + dir*amt, list.length);
   }
 
+  setMiscItemFromBody(childGender, child);
   return child;
 }
 
@@ -1831,8 +2653,11 @@ function ensureParentsHaveSurnames(){
 function regenerateFamilyCache(){
   ensureParentsHaveSurnames();
 
-  const father = cloneState(stateByGender.male);
-  const mother = cloneState(stateByGender.female);
+  const father = cloneState(STATE("male"));
+  const mother = cloneState(STATE("female"));
+
+  setMiscItemFromBody("male", father);
+  setMiscItemFromBody("female", mother);
 
   const sur =
     extractSurname(bioByGender.male.name) ||
@@ -1859,13 +2684,17 @@ function regenerateFamilyCache(){
 
 function renderHeadInto(ctxOut, gender, st, x, y, size){
   const oldIdle = idleEnabled;
+  const oldDragX = drag.x, oldDragY = drag.y;
+
   idleEnabled = false;
+  drag.x = 0; drag.y = 0;
 
   headTempCtx.clearRect(0,0,headTemp.width, headTemp.height);
   const layerOrder = (gender === "male") ? MALE_HEAD_LAYER_ORDER : FEMALE_HEAD_LAYER_ORDER;
   renderToCanvas(gender, headTempCtx, headTemp, st, layerOrder);
 
   idleEnabled = oldIdle;
+  drag.x = oldDragX; drag.y = oldDragY;
 
   const sx = Math.floor(headTemp.width * HEAD_CROP.x);
   const sy = Math.floor(headTemp.height * HEAD_CROP.y);
@@ -1886,7 +2715,6 @@ function drawFamily(){
   ftCtx.fillRect(0,0,W,H);
 
   const n = familyCache.kids.length;
-
   const box = (n === 3) ? 96 : 120;
   const labelH = 18;
   const parentNameGapTop = 6;
@@ -2009,16 +2837,21 @@ async function setGender(g){
   if (g !== "male" && g !== "female") return;
 
   syncBioFromInputs();
-
   activeGender = g;
+
+  drag.x = 0; drag.y = 0;
+
   buildControls();
 
   for (const cat of CATS()){
-    const list = ASSETS()[cat.key] || [];
+    const list = getListFor(activeGender, cat.key);
     if (!list.length) STATE()[cat.key] = 0;
     else STATE()[cat.key] = Math.max(0, Math.min(STATE()[cat.key] ?? 0, list.length - 1));
     setReadout(cat.key);
   }
+
+  enforceMiscLock();
+  buildControls();
 
   syncInputsFromBio();
   if (!$("nameInput").value.trim()){
@@ -2029,6 +2862,8 @@ async function setGender(g){
     bioByGender[activeGender].age = String(randomAge());
     syncInputsFromBio();
   }
+
+  refreshBlinkClosedIndex(activeGender);
 
   saveState();
   render();
@@ -2041,8 +2876,15 @@ async function setGender(g){
 /* =========================
    IDLE LOOP
 ========================= */
-function idleLoop() {
-  if (idleEnabled) idleTime += IDLE_SPEED * 16;
+let lastFrameTime = 0;
+function idleLoop(ts) {
+  if (!lastFrameTime) lastFrameTime = ts;
+  const dt = ts - lastFrameTime;
+  lastFrameTime = ts;
+
+  if (idleEnabled) idleTime += IDLE_SPEED * dt;
+  updateBlink(dt);
+
   render();
   requestAnimationFrame(idleLoop);
 }
@@ -2063,6 +2905,7 @@ async function init() {
     toggle.checked = idleEnabled;
     toggle.addEventListener("change", () => {
       idleEnabled = !!toggle.checked;
+      drag.x = 0; drag.y = 0;
       try { localStorage.setItem(IDLE_TOGGLE_KEY, idleEnabled ? "1" : "0"); } catch {}
       render();
     });
@@ -2075,8 +2918,10 @@ async function init() {
 
   await loadGenderAssets("male");
   await loadGenderAssets("female");
-
   await loadCrestAssets();
+
+  refreshBlinkClosedIndex("male");
+  refreshBlinkClosedIndex("female");
 
   for (const cat of CATS()){
     setReadout(cat.key);
@@ -2088,6 +2933,9 @@ async function init() {
   if (!bioByGender.female.age) bioByGender.female.age = String(randomAge());
 
   syncInputsFromBio();
+
+  enforceMiscLock();
+  buildControls();
 
   saveState();
   render();
@@ -2108,7 +2956,28 @@ $("btnExport").addEventListener("click", exportPNG);
 
 $("btnApplySeed").addEventListener("click", () => {
   const s = $("seedInput").value.trim();
-  if (!applySeed(s)) alert("Bad seed format.");
+  const cats = CATS();
+  const parts = s.split("-").map(x => parseInt(x,10));
+  if (parts.length !== cats.length || parts.some(n => Number.isNaN(n))){
+    alert("Bad seed format.");
+    return;
+  }
+  for (let i=0;i<cats.length;i++){
+    const key = cats[i].key;
+    const list = getListFor(activeGender, key);
+    if (!list.length) { STATE()[key] = 0; continue; }
+    STATE()[key] = clamp(parts[i], 0, list.length-1);
+    setReadout(key);
+  }
+
+  enforceMiscLock();
+  buildControls();
+
+  saveState();
+  render();
+  updatePersonalityUI();
+  regenerateFamilyCache();
+  drawFamily();
 });
 
 $("btnName").addEventListener("click", () => {
@@ -2119,7 +2988,6 @@ $("btnName").addEventListener("click", () => {
   syncInputsFromBio();
   saveState();
 });
-
 $("btnAge").addEventListener("click", () => {
   syncBioFromInputs();
   bioByGender[activeGender].age = String(randomAge());
@@ -2149,7 +3017,7 @@ $("btnCrestNew").addEventListener("click", () => {
 });
 
 init();
-idleLoop();
+requestAnimationFrame(idleLoop);
 </script>
 </body>
 </html>
